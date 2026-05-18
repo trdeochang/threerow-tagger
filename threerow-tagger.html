@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>三行 照片貼標籤工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans TC', sans-serif; background: #f5f4f0; color: #1a1a1a; font-size: 14px; }
+#app { display: none; height: 100vh; flex-direction: column; }
+#app.ready { display: flex; }
+
+/* Upload */
+#upload-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 24px; padding: 24px; }
+#upload-screen h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.5px; text-align: center; }
+#upload-screen p { color: #666; font-size: 13px; text-align: center; }
+.upload-box { border: 1.5px dashed #ccc; border-radius: 12px; padding: 48px 48px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; width: 100%; max-width: 400px; }
+.upload-box:hover, .upload-box.drag-over { border-color: #888; background: #fafaf8; }
+.upload-box input { display: none; }
+.upload-box label { cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.upload-icon { font-size: 32px; }
+.upload-box .hint { font-size: 12px; color: #999; margin-top: 4px; }
+
+/* Topbar */
+#topbar { background: #1a1a1a; color: #fff; padding: 0 16px; height: 52px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+#topbar h1 { font-size: 15px; font-weight: 500; letter-spacing: -0.3px; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+#progress-text { font-size: 12px; color: #aaa; }
+.btn-download { background: #fff; color: #1a1a1a; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+
+/* Layout */
+#main { display: flex; flex: 1; overflow: hidden; }
+
+/* Photo list */
+#photo-list { width: 200px; flex-shrink: 0; background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
+#case-filter { padding: 10px 10px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+#case-filter select { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 7px 8px; font-size: 12px; background: #fafaf8; }
+#filter-bar { padding: 8px 10px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+#filter-bar label { font-size: 11px; color: #999; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+#filter-bar input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+#photo-list-items { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.photo-item { padding: 9px 10px; border-bottom: 1px solid #f0ede8; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.photo-item.active { background: #f0ede8; }
+.photo-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
+.photo-info { flex: 1; min-width: 0; }
+.photo-title { font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.photo-num { font-size: 10px; color: #bbb; margin-top: 2px; }
+.tagged-dot { width: 7px; height: 7px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
+.tagged-dot.empty { background: #ddd; }
+
+/* Photo center */
+#photo-center { flex: 1; display: flex; flex-direction: column; background: #f5f4f0; overflow: hidden; min-width: 0; }
+#photo-title-bar { background: #fff; padding: 10px 16px; border-bottom: 1px solid #e8e6e0; font-size: 13px; color: #444; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+#photo-title-bar strong { color: #1a1a1a; }
+#photo-display { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: hidden; }
+#photo-display img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 20px rgba(0,0,0,0.12); }
+#photo-nav { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; background: #fff; border-top: 1px solid #e8e6e0; flex-shrink: 0; }
+.nav-btn { background: #1a1a1a; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; font-size: 13px; cursor: pointer; }
+.nav-btn:disabled { opacity: 0.25; }
+#nav-index { font-size: 13px; color: #666; min-width: 80px; text-align: center; }
+
+/* Tag panel */
+#tag-panel { width: 320px; flex-shrink: 0; background: #fff; border-left: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
+#tag-panel-top { flex-shrink: 0; }
+#kbd-hint { padding: 7px 14px; background: #fafaf8; border-bottom: 1px solid #f0ede8; font-size: 11px; color: #aaa; }
+kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monospace; font-size: 11px; color: #555; }
+#tag-summary { padding: 9px 14px; border-bottom: 1px solid #f0ede8; }
+#tag-summary .label { font-size: 11px; color: #999; margin-bottom: 3px; }
+#tag-summary .value { font-size: 12px; color: #444; line-height: 1.6; word-break: break-all; }
+#tag-summary .value.empty { color: #bbb; font-style: italic; }
+#tag-sections { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* Tag sections */
+.tag-section { border-bottom: 1px solid #f0ede8; }
+.tag-section-header { padding: 9px 10px 5px; font-size: 11px; font-weight: 500; color: #888; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; }
+.cat-label { flex: 1; }
+.tag-section-actions { display: flex; gap: 3px; }
+.btn-sm { font-size: 10px; color: #bbb; cursor: pointer; padding: 3px 7px; border-radius: 4px; border: 1px solid transparent; white-space: nowrap; min-height: 24px; display: flex; align-items: center; }
+.btn-sm:active { background: #eee; }
+.btn-sm.edit-active { color: #b07d00; border-color: #e8c040; background: #fffbee; }
+
+/* Chips */
+.tag-chips { padding: 4px 8px 10px; display: flex; flex-wrap: wrap; gap: 5px; min-height: 24px; }
+.chip { padding: 5px 11px; border-radius: 20px; border: 1px solid #ddd; font-size: 12px; cursor: pointer; background: #fafaf8; color: #444; user-select: none; display: inline-flex; align-items: center; gap: 3px; min-height: 30px; touch-action: none; }
+.chip.selected { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+.chip.edit-mode { border-style: dashed; cursor: grab; }
+.chip.dragging { opacity: 0.3; }
+.chip.drop-before { box-shadow: -3px 0 0 #1a1a1a; }
+.chip.drop-after { box-shadow: 3px 0 0 #1a1a1a; }
+.drag-handle { color: #ccc; font-size: 10px; margin-right: 1px; }
+.chip-del { color: #ccc; font-size: 15px; line-height: 1; cursor: pointer; padding: 0 2px; min-width: 18px; text-align: center; }
+.chip-del:active { color: #c00; }
+
+/* Rename inline input */
+.chip.renaming { padding: 2px 4px; border-style: solid; border-color: #999; background: #fff; cursor: text; }
+.chip-rename-input { border: none; outline: none; background: transparent; font-size: 12px; font-family: inherit; color: #1a1a1a; width: 80px; min-width: 40px; }
+
+/* Add row */
+.add-row { padding: 2px 8px 10px; display: none; gap: 6px; }
+.add-row.visible { display: flex; }
+.add-row input { flex: 1; border: 1px solid #ddd; border-radius: 20px; padding: 7px 12px; font-size: 12px; background: #fafaf8; outline: none; }
+.add-row input:focus { border-color: #999; background: #fff; }
+.add-row button { background: #1a1a1a; color: #fff; border: none; border-radius: 20px; padding: 7px 14px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+
+/* Loading */
+.loading { display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; gap: 16px; color: #666; font-size: 14px; }
+.spinner { width: 28px; height: 28px; border: 2px solid #eee; border-top-color: #1a1a1a; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* iPad responsive — hide photo list, enlarge touch targets */
+@media (max-width: 900px) {
+  #photo-list { width: 160px; }
+  #tag-panel { width: 280px; }
+  .chip { min-height: 34px; padding: 6px 11px; }
+  .btn-sm { min-height: 28px; padding: 4px 8px; }
+}
+@media (max-width: 700px) {
+  #photo-list { display: none; }
+  #tag-panel { width: 260px; }
+}
+</style>
+</head>
+<body>
+
+<div id="upload-screen">
+  <div>
+    <h1>三行 照片貼標籤工具</h1>
+    <p style="margin-top:6px">上傳 threerowV3.xlsx，完成貼標籤後下載更新版</p>
+  </div>
+  <div class="upload-box" id="drop-zone">
+    <label for="file-input">
+      <div class="upload-icon">📂</div>
+      <div><strong>點擊選擇</strong>或將 threerowV3.xlsx 拖曳至此</div>
+      <div class="hint">接受 .xlsx 格式</div>
+    </label>
+    <input type="file" id="file-input" accept=".xlsx">
+  </div>
+</div>
+
+<div id="loading" class="loading" style="display:none">
+  <div class="spinner"></div>
+  <span id="loading-text">讀取中…</span>
+</div>
+
+<div id="app">
+  <div id="topbar">
+    <h1>三行 照片貼標籤</h1>
+    <div class="topbar-right">
+      <span id="progress-text"></span>
+      <button class="btn-download" onclick="downloadXlsx()">⬇ 下載 xlsx</button>
+    </div>
+  </div>
+  <div id="main">
+    <div id="photo-list">
+      <div id="case-filter">
+        <select id="case-select" onchange="filterByCase()"><option value="">全部案件</option></select>
+      </div>
+      <div id="filter-bar">
+        <label><input type="checkbox" id="show-untagged" onchange="filterByCase()"> 只看未貼標</label>
+      </div>
+      <div id="photo-list-items"></div>
+    </div>
+    <div id="photo-center">
+      <div id="photo-title-bar">
+        <strong id="current-title">—</strong>
+        <span id="current-filename" style="color:#bbb;font-size:12px"></span>
+      </div>
+      <div id="photo-display"><img id="main-photo" src="" alt=""></div>
+      <div id="photo-nav">
+        <button class="nav-btn" id="btn-prev" onclick="navigateFiltered(-1)">← 上一張</button>
+        <span id="nav-index">—</span>
+        <button class="nav-btn" id="btn-next" onclick="navigateFiltered(1)">下一張 →</button>
+      </div>
+    </div>
+    <div id="tag-panel">
+      <div id="tag-panel-top">
+        <div id="kbd-hint">快捷鍵：<kbd>←</kbd><kbd>→</kbd> 切換照片</div>
+        <div id="tag-summary">
+          <div class="label">目前 tag</div>
+          <div class="value empty" id="tag-preview">（尚未選擇）</div>
+        </div>
+      </div>
+      <div id="tag-sections"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CAT_COLS = {
+  '空間':[5,6,7,8,9], '建材':[10,11,12,13,14,15,16,17,18,19],
+  '軟裝':[20,21,22,23,24,25], '工程':[26,27,28,29,30,31,32,33,34,35,36],
+  '生活':[37,38,39,40,41,42,43,44,45], '色調':[46]
+};
+const CATS = ['空間','建材','軟裝','工程','生活','色調'];
+let photos=[], tagOptions={}, editModes={}, currentIdx=0;
+let filteredIndices=[], filteredPos=0, rawWb=null, dragSrc=null;
+CATS.forEach(c=>{ editModes[c]=false; tagOptions[c]=[]; });
+
+// ── screen switcher ──────────────────────────────────────
+function screen(s){
+  document.getElementById('upload-screen').style.display = s==='upload' ? 'flex' : 'none';
+  document.getElementById('loading').style.display = s==='loading' ? 'flex' : 'none';
+  document.getElementById('app').classList.toggle('ready', s==='app');
+}
+screen('upload');
+
+// ── file input ───────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e=>{ if(e.target.files[0]) load(e.target.files[0]); });
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', ()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e=>{ e.preventDefault(); dz.classList.remove('drag-over'); if(e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+
+function load(file){
+  screen('loading');
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      rawWb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const imgRows = XLSX.utils.sheet_to_json(rawWb.Sheets['img'], {header:1});
+      const tagRows = XLSX.utils.sheet_to_json(rawWb.Sheets['tag'], {header:1});
+      document.getElementById('loading-text').textContent = '解析資料…';
+
+      const tagHeader = tagRows[0] || [];
+      CATS.forEach(cat => {
+        const ci = tagHeader.indexOf(cat);
+        tagOptions[cat] = ci >= 0
+          ? tagRows.slice(1).map(r=>r[ci]).filter(v=>v!=null && String(v).trim()).map(String)
+          : [];
+      });
+
+      photos = [];
+      for(let i=1; i<imgRows.length; i++){
+        const row = imgRows[i];
+        const sel = {};
+        CATS.forEach(cat => {
+          sel[cat] = CAT_COLS[cat].map(c=>row[c]).filter(v=>v!=null && String(v).trim()).map(String);
+        });
+        photos.push({
+          idx: i-1, rowIdx: i,
+          title: String(row[0]||''), url: String(row[1]||''),
+          filename: String(row[2]||''), tag: String(row[3]||''),
+          targetUrl: String(row[4]||''), selected: sel
+        });
+      }
+      buildUI();
+      screen('app');
+    } catch(err) { alert('讀取失敗：'+err.message); screen('upload'); }
+  };
+  r.readAsArrayBuffer(file);
+}
+
+// ── build UI ─────────────────────────────────────────────
+function buildUI(){
+  const cs = document.getElementById('case-select');
+  [...new Set(photos.map(p=>p.title))].forEach(c=>{
+    const o = document.createElement('option'); o.value=c; o.textContent=c; cs.appendChild(o);
+  });
+  const container = document.getElementById('tag-sections');
+  container.innerHTML = '';
+  CATS.forEach(cat => buildSection(cat, container));
+  filterByCase();
+}
+
+function buildSection(cat, parent){
+  const editMode = editModes[cat];
+  const sec = document.createElement('div');
+  sec.className = 'tag-section'; sec.id = 'sec-'+cat;
+
+  sec.innerHTML = `
+    <div class="tag-section-header">
+      <span class="cat-label">${cat}</span>
+      <div class="tag-section-actions">
+        <span class="btn-sm ${editMode?'edit-active':''}" ontouchend="tap(event,()=>toggleEdit('${cat}'))" onclick="toggleEdit('${cat}')">${editMode?'✓ 完成':'排列'}</span>
+        <span class="btn-sm" ontouchend="tap(event,()=>toggleAddRow('${cat}'))" onclick="toggleAddRow('${cat}')">+ 新增</span>
+        <span class="btn-sm" ontouchend="tap(event,()=>clearCat('${cat}'))" onclick="clearCat('${cat}')">全清</span>
+      </div>
+    </div>
+    <div class="tag-chips" id="chips-${cat}"></div>
+    <div class="add-row" id="add-${cat}">
+      <input id="addinput-${cat}" type="text" placeholder="輸入新標籤名稱" maxlength="30"
+        onkeydown="onAddKey(event,'${cat}')">
+      <button ontouchend="tap(event,()=>addTag('${cat}'))" onclick="addTag('${cat}')">確認</button>
+    </div>`;
+
+  const old = document.getElementById('sec-'+cat);
+  if(old) old.replaceWith(sec);
+  else if(parent) parent.appendChild(sec);
+
+  renderChips(cat);
+}
+
+// ── render chips ─────────────────────────────────────────
+function renderChips(cat){
+  const div = document.getElementById('chips-'+cat); if(!div) return;
+  div.innerHTML = '';
+  const editMode = editModes[cat];
+  const p = photos[currentIdx];
+  const sel = p ? p.selected[cat] : [];
+
+  tagOptions[cat].forEach((val, i) => {
+    const chip = document.createElement('div');
+
+    if(editMode){
+      chip.className = 'chip edit-mode';
+      chip.innerHTML = `<span class="drag-handle">⠿</span><span class="chip-label">${val}</span><span class="chip-del" data-i="${i}">×</span>`;
+
+      // Long-press to rename (touch) or double-click (mouse)
+      let pressTimer = null;
+      chip.addEventListener('touchstart', e=>{
+        pressTimer = setTimeout(()=>{ pressTimer=null; startRename(cat, i, chip); }, 600);
+      }, {passive:true});
+      chip.addEventListener('touchend', ()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } });
+      chip.addEventListener('touchmove', ()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } });
+      chip.addEventListener('dblclick', ()=>startRename(cat, i, chip));
+
+      // Delete button
+      chip.querySelector('.chip-del').addEventListener('click', e=>{ e.stopPropagation(); delTag(cat, i); });
+      chip.querySelector('.chip-del').addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); delTag(cat, i); });
+
+      // Drag (desktop)
+      chip.draggable = true;
+      chip.addEventListener('dragstart', e=>onDS(e, cat, i));
+      chip.addEventListener('dragover',  e=>onDO(e, cat, i));
+      chip.addEventListener('dragleave', e=>onDL(e));
+      chip.addEventListener('drop',      e=>onDrop(e, cat, i));
+      chip.addEventListener('dragend',   e=>onDE(e, cat));
+
+      // Touch drag (iPad)
+      setupTouchDrag(chip, cat, i);
+
+    } else {
+      chip.className = 'chip' + (sel.includes(val) ? ' selected' : '');
+      chip.textContent = val;
+      chip.addEventListener('click', ()=>toggleTag(cat, val));
+      chip.addEventListener('touchend', e=>{ e.preventDefault(); toggleTag(cat, val); });
+    }
+
+    chip.dataset.i = i;
+    div.appendChild(chip);
+  });
+}
+
+// ── rename ───────────────────────────────────────────────
+function startRename(cat, i, chip){
+  if(chip.classList.contains('renaming')) return;
+  chip.classList.add('renaming');
+  const labelSpan = chip.querySelector('.chip-label');
+  const oldVal = tagOptions[cat][i];
+  const input = document.createElement('input');
+  input.className = 'chip-rename-input';
+  input.value = oldVal;
+  input.style.width = Math.max(60, oldVal.length * 13) + 'px';
+  labelSpan.replaceWith(input);
+  input.focus(); input.select();
+
+  function commit(){
+    const newVal = input.value.trim();
+    if(newVal && newVal !== oldVal){
+      // Update tagOptions
+      tagOptions[cat][i] = newVal;
+      // Update all photos that had the old tag
+      photos.forEach(p => {
+        const idx = p.selected[cat].indexOf(oldVal);
+        if(idx >= 0){ p.selected[cat][idx] = newVal; recompute(p); }
+      });
+      updatePreview();
+      updateProgress();
+    }
+    renderChips(cat);
+  }
+
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){ e.preventDefault(); commit(); }
+    if(e.key === 'Escape'){ renderChips(cat); }
+  });
+  input.addEventListener('blur', commit);
+}
+
+// ── tag actions ──────────────────────────────────────────
+function toggleTag(cat, val){
+  const p = photos[currentIdx];
+  const arr = p.selected[cat];
+  const idx = arr.indexOf(val);
+  if(idx >= 0) arr.splice(idx, 1); else arr.push(val);
+  recompute(p); updatePreview();
+  updateDot(filteredPos, hasTag(p)); updateProgress();
+  document.querySelectorAll(`#chips-${cat} .chip`).forEach(c=>{
+    c.classList.toggle('selected', arr.includes(tagOptions[cat][parseInt(c.dataset.i)]));
+  });
+}
+
+function clearCat(cat){
+  const p = photos[currentIdx]; p.selected[cat] = [];
+  recompute(p); updatePreview(); renderChips(cat); updateProgress();
+}
+
+function recompute(p){
+  const all = []; CATS.forEach(cat=>all.push(...p.selected[cat])); p.tag = all.join(',');
+}
+function updatePreview(){
+  const p = photos[currentIdx]; const el = document.getElementById('tag-preview');
+  el.textContent = p.tag || '（尚未選擇）'; el.className = 'value' + (p.tag ? '' : ' empty');
+}
+
+// ── add tag ──────────────────────────────────────────────
+function toggleAddRow(cat){
+  const row = document.getElementById('add-'+cat);
+  const showing = row.classList.toggle('visible');
+  if(showing) setTimeout(()=>document.getElementById('addinput-'+cat).focus(), 40);
+}
+function onAddKey(e, cat){
+  if(e.key === 'Enter') addTag(cat);
+  if(e.key === 'Escape') document.getElementById('add-'+cat).classList.remove('visible');
+}
+function addTag(cat){
+  const input = document.getElementById('addinput-'+cat);
+  const val = input.value.trim(); if(!val) return;
+  if(tagOptions[cat].includes(val)){ input.select(); return; }
+  tagOptions[cat].push(val);
+  renderChips(cat); input.value = '';
+  document.getElementById('add-'+cat).classList.remove('visible');
+}
+
+// ── delete tag ───────────────────────────────────────────
+function delTag(cat, i){
+  const val = tagOptions[cat][i];
+  if(!confirm(`刪除標籤「${val}」？\n（已選此標籤的照片會自動移除）`)) return;
+  tagOptions[cat].splice(i, 1);
+  photos.forEach(p=>{
+    const j = p.selected[cat].indexOf(val);
+    if(j >= 0){ p.selected[cat].splice(j, 1); recompute(p); }
+  });
+  renderChips(cat); updatePreview(); updateProgress();
+}
+
+// ── edit mode toggle ─────────────────────────────────────
+function toggleEdit(cat){ editModes[cat] = !editModes[cat]; buildSection(cat, null); }
+
+// ── desktop drag-to-reorder ──────────────────────────────
+function onDS(e, cat, i){ dragSrc={cat,i}; e.dataTransfer.effectAllowed='move'; setTimeout(()=>e.target.classList.add('dragging'),0); }
+function onDO(e, cat, i){
+  e.preventDefault(); if(!dragSrc||dragSrc.cat!==cat) return;
+  clearDropStyles(cat);
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.classList.add(e.clientX < r.left+r.width/2 ? 'drop-before' : 'drop-after');
+}
+function onDL(e){ e.currentTarget.classList.remove('drop-before','drop-after'); }
+function onDrop(e, cat, toI){
+  e.preventDefault(); if(!dragSrc||dragSrc.cat!==cat) return;
+  doMove(cat, dragSrc.i, toI, e.clientX, e.currentTarget.getBoundingClientRect());
+  dragSrc = null; renderChips(cat);
+}
+function onDE(e, cat){ clearDropStyles(cat); document.querySelectorAll(`#chips-${cat} .dragging`).forEach(c=>c.classList.remove('dragging')); dragSrc=null; }
+function clearDropStyles(cat){ document.querySelectorAll(`#chips-${cat} .chip`).forEach(c=>c.classList.remove('drop-before','drop-after')); }
+function doMove(cat, fromI, toI, clientX, rect){
+  const before = clientX < rect.left + rect.width / 2;
+  let to = before ? toI : toI + 1;
+  if(fromI < to) to--;
+  if(fromI !== to){ const [m] = tagOptions[cat].splice(fromI, 1); tagOptions[cat].splice(to, 0, m); }
+}
+
+// ── touch drag-to-reorder (iPad) ─────────────────────────
+function setupTouchDrag(chip, cat, chipIdx){
+  let startX, startY, clone, moved=false;
+
+  chip.addEventListener('touchstart', e=>{
+    if(e.touches.length !== 1) return;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; moved = false;
+  }, {passive:true});
+
+  chip.addEventListener('touchmove', e=>{
+    if(e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if(!moved && Math.sqrt(dx*dx+dy*dy) < 8) return;
+    moved = true;
+    e.preventDefault();
+
+    if(!clone){
+      clone = chip.cloneNode(true);
+      clone.style.cssText = `position:fixed;opacity:0.75;pointer-events:none;z-index:9999;border-style:solid;background:#fff;`;
+      const r = chip.getBoundingClientRect();
+      clone.style.width = r.width+'px';
+      clone.style.top = r.top+'px';
+      clone.style.left = r.left+'px';
+      document.body.appendChild(clone);
+      chip.classList.add('dragging');
+    }
+
+    clone.style.transform = `translate(${dx}px,${dy}px)`;
+
+    // Find chip under touch
+    clone.style.display = 'none';
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    clone.style.display = '';
+    clearDropStyles(cat);
+    const target = el ? el.closest(`#chips-${cat} .chip`) : null;
+    if(target && target !== chip){
+      const r = target.getBoundingClientRect();
+      target.classList.add(t.clientX < r.left+r.width/2 ? 'drop-before' : 'drop-after');
+    }
+  }, {passive:false});
+
+  chip.addEventListener('touchend', e=>{
+    if(!moved){ if(clone){ clone.remove(); clone=null; } return; }
+    if(clone){ clone.remove(); clone=null; }
+    chip.classList.remove('dragging');
+
+    const t = e.changedTouches[0];
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    const target = el ? el.closest(`#chips-${cat} .chip`) : null;
+    if(target && target !== chip){
+      const toI = parseInt(target.dataset.i);
+      doMove(cat, chipIdx, toI, t.clientX, target.getBoundingClientRect());
+    }
+    clearDropStyles(cat);
+    renderChips(cat);
+  });
+}
+
+// ── photo navigation ─────────────────────────────────────
+function filterByCase(){
+  const cv = document.getElementById('case-select').value;
+  const uo = document.getElementById('show-untagged').checked;
+  filteredIndices = photos.map((_,i)=>i).filter(i=>{
+    const p = photos[i];
+    return (!cv || p.title===cv) && (!uo || !hasTag(p));
+  });
+  renderList();
+  if(filteredIndices.length){ filteredPos=0; goTo(0); }
+  updateProgress();
+}
+
+function renderList(){
+  const c = document.getElementById('photo-list-items'); c.innerHTML = '';
+  filteredIndices.forEach((pi, pos)=>{
+    const p = photos[pi];
+    const item = document.createElement('div');
+    item.className = 'photo-item' + (pos===filteredPos ? ' active' : '');
+    item.id = 'li'+pos;
+    item.innerHTML = `
+      <img class="photo-thumb" src="${p.url}" onerror="this.style.background='#ddd'" loading="lazy">
+      <div class="photo-info">
+        <div class="photo-title">${p.title}</div>
+        <div class="photo-num">${p.filename||'#'+(pi+1)}</div>
+      </div>
+      <div class="tagged-dot ${hasTag(p)?'':'empty'}"></div>`;
+    item.addEventListener('click', ()=>{ filteredPos=pos; goTo(pos); });
+    item.addEventListener('touchend', e=>{ e.preventDefault(); filteredPos=pos; goTo(pos); });
+    c.appendChild(item);
+  });
+}
+
+function goTo(pos){
+  if(!filteredIndices.length) return;
+  filteredPos = Math.max(0, Math.min(pos, filteredIndices.length-1));
+  const pi = filteredIndices[filteredPos];
+  loadPhoto(pi);
+  document.querySelectorAll('.photo-item').forEach((el,i)=>el.classList.toggle('active', i===filteredPos));
+  const ae = document.getElementById('li'+filteredPos); if(ae) ae.scrollIntoView({block:'nearest'});
+  document.getElementById('btn-prev').disabled = filteredPos===0;
+  document.getElementById('btn-next').disabled = filteredPos===filteredIndices.length-1;
+  document.getElementById('nav-index').textContent = `${filteredPos+1} / ${filteredIndices.length}`;
+}
+
+function navigateFiltered(d){ goTo(filteredPos+d); }
+
+function loadPhoto(pi){
+  currentIdx = pi; const p = photos[pi];
+  document.getElementById('main-photo').src = p.url;
+  document.getElementById('current-title').textContent = p.title;
+  document.getElementById('current-filename').textContent = p.filename;
+  CATS.forEach(cat=>{ if(!editModes[cat]) renderChips(cat); });
+  updatePreview();
+}
+
+function hasTag(p){ return CATS.some(cat=>p.selected[cat].length>0); }
+function updateDot(pos, tagged){ const el=document.getElementById('li'+pos); if(!el) return; const d=el.querySelector('.tagged-dot'); if(d) d.className='tagged-dot'+(tagged?'':' empty'); }
+function updateProgress(){ const t=photos.filter(p=>hasTag(p)).length; document.getElementById('progress-text').textContent=`已貼標 ${t} / ${photos.length}`; }
+
+// ── iPad swipe to navigate ────────────────────────────────
+let swipeStartX = null;
+document.getElementById('photo-display').addEventListener('touchstart', e=>{ swipeStartX = e.touches[0].clientX; }, {passive:true});
+document.getElementById('photo-display').addEventListener('touchend', e=>{
+  if(swipeStartX === null) return;
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+  if(Math.abs(dx) > 60){ navigateFiltered(dx < 0 ? 1 : -1); }
+  swipeStartX = null;
+});
+
+// ── tap helper (prevent double-fire on touch+click) ──────
+function tap(e, fn){ e.preventDefault(); fn(); }
+
+// ── download ─────────────────────────────────────────────
+function downloadXlsx(){
+  if(!rawWb){ alert('請先上傳檔案'); return; }
+
+  // Update img sheet
+  const imgRows = XLSX.utils.sheet_to_json(rawWb.Sheets['img'], {header:1});
+  photos.forEach(p=>{
+    const row = imgRows[p.rowIdx]; if(!row) return;
+    row[3] = p.tag || null;
+    CATS.forEach(cat=>{
+      const cols = CAT_COLS[cat]; const vals = p.selected[cat];
+      cols.forEach((c,i)=>{ row[c] = vals[i]!=null ? vals[i] : null; });
+    });
+  });
+  rawWb.Sheets['img'] = XLSX.utils.aoa_to_sheet(imgRows);
+
+  // Update tag sheet (persist order + new tags)
+  const maxLen = Math.max(...CATS.map(cat=>tagOptions[cat].length));
+  const newTagRows = [CATS];
+  for(let r=0; r<maxLen; r++) newTagRows.push(CATS.map(cat=>tagOptions[cat][r]!=null ? tagOptions[cat][r] : null));
+  rawWb.Sheets['tag'] = XLSX.utils.aoa_to_sheet(newTagRows);
+
+  const now = new Date();
+  const stamp = `${now.getMonth()+1}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+  XLSX.writeFile(rawWb, `threerowV3_${stamp}.xlsx`);
+}
+
+// ── keyboard ─────────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if(e.key==='ArrowRight') navigateFiltered(1);
+  if(e.key==='ArrowLeft') navigateFiltered(-1);
+});
+</script>
+</body>
+</html>
