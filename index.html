@@ -72,6 +72,11 @@ kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monos
 #tag-summary { padding: 9px 14px; border-bottom: 1px solid #f0ede8; }
 #tag-summary .label { font-size: 11px; color: #999; margin-bottom: 3px; }
 #tag-summary .value { font-size: 12px; color: #444; line-height: 1.6; word-break: break-all; }
+.tag-summary-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+.tag-summary-head .label { margin-bottom: 0; }
+#btn-copy-prev { font-size: 12px; padding: 4px 10px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; white-space: nowrap; color: #333; }
+#btn-copy-prev:hover { background: #f0ede8; }
+#btn-copy-prev:active { background: #e8e3da; }
 #tag-summary .value.empty { color: #bbb; font-style: italic; }
 #tag-sections { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
@@ -149,7 +154,10 @@ kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monos
       <div id="tag-panel-top">
         <div id="kbd-hint">快捷鍵：<kbd>←</kbd><kbd>→</kbd> 切換照片</div>
         <div id="tag-summary">
-          <div class="label">目前 tag</div>
+          <div class="tag-summary-head">
+            <div class="label">目前 tag</div>
+            <button id="btn-copy-prev" onclick="copyFromPrev()" title="把上一張的標籤覆蓋過來">⤵ 複製上一張</button>
+          </div>
           <div class="value empty" id="tag-preview">（尚未選擇）</div>
         </div>
       </div>
@@ -463,6 +471,19 @@ function goTo(pos){
 }
 
 function navigateFiltered(d){ goTo(filteredPos+d); }
+function copyFromPrev(){
+  if(filteredPos<=0){ alert('已經是第一張，沒有上一張可以複製'); return; }
+  const prevPi = filteredIndices[filteredPos-1];
+  const curPi  = filteredIndices[filteredPos];
+  const prev = photos[prevPi];
+  const cur  = photos[curPi];
+  CATS.forEach(cat => { cur.selected[cat] = [...prev.selected[cat]]; });
+  recompute(cur);
+  CATS.forEach(cat => { if(!editModes[cat]) renderChips(cat); });
+  updatePreview();
+  updateDot(filteredPos, hasTag(cur));
+  scheduleSave();
+}
 function loadPhoto(pi){ currentIdx=pi; const p=photos[pi]; document.getElementById('main-photo').src=p.url; document.getElementById('current-title').textContent=p.title; document.getElementById('current-filename').textContent=p.filename; CATS.forEach(cat=>{ if(!editModes[cat]) renderChips(cat); }); updatePreview(); }
 function hasTag(p){ return CATS.some(cat=>p.selected[cat].length>0); }
 function updateDot(pos,tagged){ const el=document.getElementById('li'+pos); if(!el) return; const d=el.querySelector('.tagged-dot'); if(d) d.className='tagged-dot'+(tagged?'':' empty'); }
