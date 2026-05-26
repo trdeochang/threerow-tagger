@@ -126,11 +126,6 @@ kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monos
 #filter-banner-text strong { color: #1a1a1a; }
 #btn-clear-filter { background: #1a1a1a; color: #fff; border: none; border-radius: 5px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
 
-#tag-preview.value:not(.empty) { display: flex; flex-wrap: wrap; gap: 4px; }
-.preview-chip { display: inline-block; background: #eee; color: #333; padding: 3px 9px; border-radius: 12px; font-size: 11px; cursor: pointer; transition: background 0.1s, color 0.1s; user-select: none; }
-.preview-chip:hover { background: #1a1a1a; color: #fff; }
-.preview-chip:active { background: #444; color: #fff; }
-
 @media (max-width: 700px) {
   #topbar h1 { display: none; }
   #tag-search-wrap { margin: 0 8px; }
@@ -441,30 +436,7 @@ document.querySelectorAll(`#chips-${cat} .chip`).forEach(c=>c.classList.toggle('
 }
 function clearCat(cat){ const p=photos[currentIdx]; p.selected[cat]=[]; recompute(p); updatePreview(); renderChips(cat); updateProgress(); scheduleSave(); }
 function recompute(p){ const all=[]; CATS.forEach(cat=>all.push(...p.selected[cat])); p.tag=all.join(','); }
-function updatePreview(){
-  const p = photos[currentIdx];
-  const el = document.getElementById('tag-preview');
-  el.innerHTML = '';
-  let hasAny = false;
-  CATS.forEach(cat => {
-    p.selected[cat].forEach(tag => {
-      hasAny = true;
-      const chip = document.createElement('span');
-      chip.className = 'preview-chip';
-      chip.textContent = tag;
-      chip.title = `${cat} · ${tag}（點選只看擁有此標籤的照片）`;
-      chip.addEventListener('click', () => applyTagFilter(cat, tag));
-      chip.addEventListener('touchend', e => { e.preventDefault(); applyTagFilter(cat, tag); });
-      el.appendChild(chip);
-    });
-  });
-  if(!hasAny){
-    el.textContent = '（尚未選擇）';
-    el.className = 'value empty';
-  } else {
-    el.className = 'value';
-  }
-}
+function updatePreview(){ const p=photos[currentIdx]; const el=document.getElementById('tag-preview'); el.textContent=p.tag||'（尚未選擇）'; el.className='value'+(p.tag?'':' empty'); }
 
 function toggleAddRow(cat){ const row=document.getElementById('add-'+cat); const s=row.classList.toggle('visible'); if(s) setTimeout(()=>document.getElementById('addinput-'+cat).focus(),40); }
 function onAddKey(e,cat){ if(e.key==='Enter') addTag(cat); if(e.key==='Escape') document.getElementById('add-'+cat).classList.remove('visible'); }
