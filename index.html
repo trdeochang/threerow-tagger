@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -76,9 +75,18 @@ kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monos
 #tag-summary .value { font-size: 12px; color: #444; line-height: 1.6; word-break: break-all; }
 .tag-summary-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
 .tag-summary-head .label { margin-bottom: 0; }
-#btn-copy-prev { font-size: 12px; padding: 4px 10px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; white-space: nowrap; color: #333; }
-#btn-copy-prev:hover { background: #f0ede8; }
-#btn-copy-prev:active { background: #e8e3da; }
+.tag-summary-actions { display: flex; gap: 4px; }
+.btn-copy { font-size: 12px; padding: 4px 9px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; white-space: nowrap; color: #333; }
+.btn-copy:hover { background: #f0ede8; }
+.btn-copy:active { background: #e8e3da; }
+.btn-copy.active { background: #fff3c4; border-color: #e0b800; color: #6a5a00; }
+
+/* 選擇來源照片模式 */
+#pick-banner { display: none; padding: 8px 10px; background: #fffbe6; border-bottom: 1px solid #f0e0a0; font-size: 11px; color: #6a5a00; text-align: center; line-height: 1.4; }
+body.pick-source-mode #pick-banner { display: block; }
+body.pick-source-mode #photo-list { box-shadow: inset 0 0 0 2px #f0a500; }
+body.pick-source-mode .photo-item { cursor: copy; }
+body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset 3px 0 0 #f0a500; }
 #tag-summary .value.empty { color: #bbb; font-style: italic; }
 #tag-sections { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
@@ -159,6 +167,7 @@ kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monos
 </div>
 <div id="main">
 <div id="photo-list">
+<div id="pick-banner">👆 點選要複製標籤的照片<br><span style="color:#999">（<kbd>Esc</kbd> 取消）</span></div>
 <div id="case-filter">
 <select id="case-select" onchange="filterByCase()"><option value="">全部案件</option></select>
 </div>
@@ -189,7 +198,10 @@ kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monos
 <div id="tag-summary">
 <div class="tag-summary-head">
 <div class="label">目前 tag</div>
-<button id="btn-copy-prev" onclick="copyFromPrev()" title="把上一張的標籤覆蓋過來">⤵ 複製上一張</button>
+<div class="tag-summary-actions">
+<button class="btn-copy" id="btn-copy-prev" onclick="copyFromPrev()" title="把上一張的標籤覆蓋過來">⤵ 上一張</button>
+<button class="btn-copy" id="btn-copy-pick" onclick="togglePickSource()" title="從指定照片複製標籤">⤵ 指定</button>
+</div>
 </div>
 <div class="value empty" id="tag-preview">（尚未選擇）</div>
 </div>
@@ -270,6 +282,39 @@ function updateUndoButton(){
   if (!btn) return;
   btn.disabled = undoStack.length === 0;
   btn.title = undoStack.length ? `復原（剩 ${undoStack.length} 步）` : '無可復原動作';
+}
+
+// ── 選擇來源照片模式（複製指定照片的標籤）─────────────
+let pickSourceMode = false;
+function togglePickSource(){
+  if (pickSourceMode) { cancelPickSource(); return; }
+  if (filteredIndices.length < 2) { alert('目前篩選下沒有其他照片可以複製'); return; }
+  pickSourceMode = true;
+  document.body.classList.add('pick-source-mode');
+  const btn = document.getElementById('btn-copy-pick');
+  if (btn) { btn.textContent = '✗ 取消'; btn.classList.add('active'); }
+}
+function cancelPickSource(){
+  if (!pickSourceMode) return;
+  pickSourceMode = false;
+  document.body.classList.remove('pick-source-mode');
+  const btn = document.getElementById('btn-copy-pick');
+  if (btn) { btn.textContent = '⤵ 指定'; btn.classList.remove('active'); }
+}
+function copyFromPhoto(sourcePi){
+  const curPi = filteredIndices[filteredPos];
+  if (sourcePi === curPi) { cancelPickSource(); return; }
+  snapshot();
+  const source = photos[sourcePi];
+  const cur = photos[curPi];
+  CATS.forEach(cat => { cur.selected[cat] = [...source.selected[cat]]; });
+  recompute(cur);
+  CATS.forEach(cat => { if(!editModes[cat]) renderChips(cat); });
+  updatePreview();
+  updateDot(filteredPos, hasTag(cur));
+  updateProgress();
+  scheduleSave();
+  cancelPickSource();
 }
 
 // ── Google Identity Services ─────────────────────────────
@@ -531,6 +576,7 @@ clearDropStyles(cat); renderChips(cat); scheduleSave();
 }
 
 function filterByCase(){
+if(pickSourceMode) cancelPickSource();
 const cv=document.getElementById('case-select').value; const uo=document.getElementById('show-untagged').checked;
 filteredIndices=photos.map((_,i)=>i).filter(i=>{
   const p=photos[i];
@@ -549,8 +595,8 @@ filteredIndices.forEach((pi,pos)=>{
 const p=photos[pi]; const item=document.createElement('div');
 item.className='photo-item'+(pos===filteredPos?' active':''); item.id='li'+pos;
 item.innerHTML=`<img class="photo-thumb" src="${p.url}" onerror="this.style.background='#ddd'" loading="lazy"><div class="photo-info"><div class="photo-title">${p.title}</div><div class="photo-num">${p.filename||'#'+(pi+1)}</div></div><div class="tagged-dot ${hasTag(p)?'':'empty'}"></div>`;
-item.addEventListener('click',()=>{ filteredPos=pos; goTo(pos); });
-item.addEventListener('touchend',e=>{ if(touchGuard.moved) return; e.preventDefault(); filteredPos=pos; goTo(pos); });
+item.addEventListener('click',()=>{ if(pickSourceMode){ copyFromPhoto(filteredIndices[pos]); return; } filteredPos=pos; goTo(pos); });
+item.addEventListener('touchend',e=>{ if(touchGuard.moved) return; e.preventDefault(); if(pickSourceMode){ copyFromPhoto(filteredIndices[pos]); return; } filteredPos=pos; goTo(pos); });
 c.appendChild(item);
 });
 }
@@ -667,6 +713,7 @@ document.getElementById('photo-display').addEventListener('touchstart',e=>{ swip
 document.getElementById('photo-display').addEventListener('touchend',e=>{ if(swipeX===null) return; const dx=e.changedTouches[0].clientX-swipeX; if(Math.abs(dx)>60) navigateFiltered(dx<0?1:-1); swipeX=null; });
 function tap(e,fn){ if(touchGuard.moved) return; e.preventDefault(); fn(); }
 document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && pickSourceMode){ cancelPickSource(); return; }
   if((e.metaKey||e.ctrlKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undo(); return; }
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
   if(e.key==='ArrowRight') navigateFiltered(1);
