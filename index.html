@@ -32,6 +32,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 #save-status.error { color: #e04040; }
 #progress-text { font-size: 12px; color: #aaa; }
 .btn-top { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 7px 13px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.btn-top:disabled { opacity: 0.35; cursor: not-allowed; }
 .btn-top.accent { background: #fff; color: #1a1a1a; border-color: #fff; font-weight: 500; }
 
 /* Layout */
@@ -86,10 +87,10 @@ kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monos
 .tag-section-header { padding: 9px 10px 5px; font-size: 11px; font-weight: 500; color: #888; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; }
 .cat-label { flex: 1; }
 .tag-section-actions { display: flex; gap: 3px; }
-.btn-sm { font-size: 10px; color: #bbb; cursor: pointer; padding: 3px 7px; border-radius: 4px; border: 1px solid transparent; white-space: nowrap; min-height: 24px; display: flex; align-items: center; }
+.btn-sm { font-size: 10px; color: #bbb; cursor: pointer; padding: 3px 7px; border-radius: 4px; border: 1px solid transparent; white-space: nowrap; min-height: 24px; display: flex; align-items: center; touch-action: pan-y; }
 .btn-sm.edit-active { color: #b07d00; border-color: #e8c040; background: #fffbee; }
 .tag-chips { padding: 4px 8px 10px; display: flex; flex-wrap: wrap; gap: 5px; min-height: 24px; }
-.chip { padding: 5px 11px; border-radius: 20px; border: 1px solid #ddd; font-size: 12px; cursor: pointer; background: #fafaf8; color: #444; user-select: none; display: inline-flex; align-items: center; gap: 3px; min-height: 30px; touch-action: none; }
+.chip { padding: 5px 11px; border-radius: 20px; border: 1px solid #ddd; font-size: 12px; cursor: pointer; background: #fafaf8; color: #444; user-select: none; display: inline-flex; align-items: center; gap: 3px; min-height: 30px; touch-action: pan-y; }
 .chip.selected { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
 .chip.edit-mode { border-style: dashed; cursor: grab; }
 .chip.dragging { opacity: 0.3; }
@@ -152,6 +153,7 @@ kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monos
 <div class="topbar-right">
 <span id="save-status"></span>
 <span id="progress-text"></span>
+<button class="btn-top" id="btn-undo" onclick="undo()" disabled title="無可復原動作">⤺ 復原</button>
 <button class="btn-top accent" onclick="exportWP()">產出 WordPress 版</button>
 </div>
 </div>
@@ -215,6 +217,60 @@ let filteredIndices=[], filteredPos=0, dragSrc=null, saveTimer=null;
 let tokenClient=null, accessToken=null, rawWb=null;
 let tagFilter = null; // {cat, tag} 或 null
 CATS.forEach(c=>{ editModes[c]=false; tagOptions[c]=[]; });
+
+// ── 觸控守門：偵測滑動 vs 點擊（iPad 防誤觸）───────────────
+const touchGuard = { startX:0, startY:0, moved:false, THRESHOLD:10 };
+document.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    touchGuard.startX = e.touches[0].clientX;
+    touchGuard.startY = e.touches[0].clientY;
+    touchGuard.moved = false;
+  }
+}, { passive:true, capture:true });
+document.addEventListener('touchmove', e => {
+  if (e.touches.length === 1 && !touchGuard.moved) {
+    const dx = e.touches[0].clientX - touchGuard.startX;
+    const dy = e.touches[0].clientY - touchGuard.startY;
+    if (Math.sqrt(dx*dx + dy*dy) > touchGuard.THRESHOLD) touchGuard.moved = true;
+  }
+}, { passive:true, capture:true });
+
+// ── 復原 stack（最近 20 步）─────────────────────────────
+const undoStack = [];
+const MAX_UNDO = 20;
+function snapshot(){
+  const p = photos[currentIdx]; if(!p) return;
+  const snap = { photoIdx: currentIdx, tag: p.tag, selected: {} };
+  CATS.forEach(c => snap.selected[c] = [...p.selected[c]]);
+  undoStack.push(snap);
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  updateUndoButton();
+}
+function undo(){
+  if (!undoStack.length) return;
+  const snap = undoStack.pop();
+  const p = photos[snap.photoIdx];
+  CATS.forEach(c => p.selected[c] = [...snap.selected[c]]);
+  p.tag = snap.tag;
+  const targetPos = filteredIndices.indexOf(snap.photoIdx);
+  if (targetPos >= 0 && targetPos !== filteredPos) {
+    filteredPos = targetPos;
+    goTo(targetPos);
+  } else {
+    CATS.forEach(c => { if (!editModes[c]) renderChips(c); });
+    updatePreview();
+  }
+  updateDot(filteredPos, hasTag(p));
+  updateProgress();
+  scheduleSave();
+  updateUndoButton();
+}
+function updateUndoButton(){
+  const btn = document.getElementById('btn-undo');
+  if (!btn) return;
+  btn.disabled = undoStack.length === 0;
+  btn.title = undoStack.length ? `復原（剩 ${undoStack.length} 步）` : '無可復原動作';
+}
 
 // ── Google Identity Services ─────────────────────────────
 function initGIS(){
@@ -400,7 +456,7 @@ setupTouchDrag(chip,cat,i);
 chip.className='chip'+(sel.includes(val)?' selected':'');
 chip.textContent=val;
 chip.addEventListener('click',()=>toggleTag(cat,val));
-chip.addEventListener('touchend',e=>{ e.preventDefault(); toggleTag(cat,val); });
+chip.addEventListener('touchend',e=>{ if(touchGuard.moved) return; e.preventDefault(); toggleTag(cat,val); });
 }
 chip.dataset.i=i; div.appendChild(chip);
 });
@@ -429,12 +485,13 @@ input.addEventListener('blur',commit);
 }
 
 function toggleTag(cat,val){
+snapshot();
 const p=photos[currentIdx]; const arr=p.selected[cat];
 const idx=arr.indexOf(val); if(idx>=0) arr.splice(idx,1); else arr.push(val);
 recompute(p); updatePreview(); updateDot(filteredPos,hasTag(p)); updateProgress(); scheduleSave();
 document.querySelectorAll(`#chips-${cat} .chip`).forEach(c=>c.classList.toggle('selected',arr.includes(tagOptions[cat][parseInt(c.dataset.i)])));
 }
-function clearCat(cat){ const p=photos[currentIdx]; p.selected[cat]=[]; recompute(p); updatePreview(); renderChips(cat); updateProgress(); scheduleSave(); }
+function clearCat(cat){ snapshot(); const p=photos[currentIdx]; p.selected[cat]=[]; recompute(p); updatePreview(); renderChips(cat); updateProgress(); scheduleSave(); }
 function recompute(p){ const all=[]; CATS.forEach(cat=>all.push(...p.selected[cat])); p.tag=all.join(','); }
 function updatePreview(){ const p=photos[currentIdx]; const el=document.getElementById('tag-preview'); el.textContent=p.tag||'（尚未選擇）'; el.className='value'+(p.tag?'':' empty'); }
 
@@ -493,7 +550,7 @@ const p=photos[pi]; const item=document.createElement('div');
 item.className='photo-item'+(pos===filteredPos?' active':''); item.id='li'+pos;
 item.innerHTML=`<img class="photo-thumb" src="${p.url}" onerror="this.style.background='#ddd'" loading="lazy"><div class="photo-info"><div class="photo-title">${p.title}</div><div class="photo-num">${p.filename||'#'+(pi+1)}</div></div><div class="tagged-dot ${hasTag(p)?'':'empty'}"></div>`;
 item.addEventListener('click',()=>{ filteredPos=pos; goTo(pos); });
-item.addEventListener('touchend',e=>{ e.preventDefault(); filteredPos=pos; goTo(pos); });
+item.addEventListener('touchend',e=>{ if(touchGuard.moved) return; e.preventDefault(); filteredPos=pos; goTo(pos); });
 c.appendChild(item);
 });
 }
@@ -588,6 +645,7 @@ function hideSearchResults(){
 function navigateFiltered(d){ goTo(filteredPos+d); }
 function copyFromPrev(){
 if(filteredPos<=0){ alert('已經是第一張，沒有上一張可以複製'); return; }
+snapshot();
 const prevPi = filteredIndices[filteredPos-1];
 const curPi = filteredIndices[filteredPos];
 const prev = photos[prevPi];
@@ -607,8 +665,13 @@ function updateProgress(){ const t=photos.filter(p=>hasTag(p)).length; document.
 let swipeX=null;
 document.getElementById('photo-display').addEventListener('touchstart',e=>{ swipeX=e.touches[0].clientX; },{passive:true});
 document.getElementById('photo-display').addEventListener('touchend',e=>{ if(swipeX===null) return; const dx=e.changedTouches[0].clientX-swipeX; if(Math.abs(dx)>60) navigateFiltered(dx<0?1:-1); swipeX=null; });
-function tap(e,fn){ e.preventDefault(); fn(); }
-document.addEventListener('keydown',e=>{ if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return; if(e.key==='ArrowRight') navigateFiltered(1); if(e.key==='ArrowLeft') navigateFiltered(-1); });
+function tap(e,fn){ if(touchGuard.moved) return; e.preventDefault(); fn(); }
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undo(); return; }
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if(e.key==='ArrowRight') navigateFiltered(1);
+  if(e.key==='ArrowLeft') navigateFiltered(-1);
+});
 </script>
 
 <!-- Google Identity Services -->
