@@ -39,7 +39,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 #main { display: flex; flex: 1; overflow: hidden; }
 
 /* Photo list */
-#photo-list { width: 200px; flex-shrink: 0; background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
+#photo-list { width: 240px; flex-shrink: 0; background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
 #case-filter { padding: 10px; border-bottom: 1px solid #eee; flex-shrink: 0; }
 #case-filter select { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 7px 8px; font-size: 12px; background: #fafaf8; }
 #filter-bar { padding: 8px 10px; border-bottom: 1px solid #eee; flex-shrink: 0; }
@@ -48,7 +48,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 #photo-list-items { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .photo-item { padding: 9px 10px; border-bottom: 1px solid #f0ede8; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .photo-item.active { background: #f0ede8; }
-.photo-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
+.photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
 .photo-info { flex: 1; min-width: 0; }
 .photo-title { font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .photo-num { font-size: 10px; color: #bbb; margin-top: 2px; }
@@ -68,6 +68,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 
 /* Tag panel */
 #tag-panel { width: 320px; flex-shrink: 0; background: #fff; border-left: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
+#panel-resizer { width: 7px; flex-shrink: 0; cursor: col-resize; background: #e8e6e0; touch-action: none; position: relative; }
+#panel-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: -5px; right: -5px; }
+#panel-resizer:hover, #panel-resizer.dragging { background: #c9c4b8; }
 #tag-panel-top { flex-shrink: 0; }
 #kbd-hint { padding: 7px 14px; background: #fafaf8; border-bottom: 1px solid #f0ede8; font-size: 11px; color: #aaa; }
 kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monospace; font-size: 11px; color: #555; }
@@ -201,6 +204,7 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 <button class="nav-btn" id="btn-next" onclick="navigateFiltered(1)">下一張 →</button>
 </div>
 </div>
+<div id="panel-resizer" title="拖拉調整標籤欄寬度"></div>
 <div id="tag-panel">
 <div id="tag-panel-top">
 <div id="kbd-hint">快捷鍵：<kbd>←</kbd><kbd>→</kbd> 切換照片</div>
@@ -761,6 +765,27 @@ function loadPhoto(pi){ currentIdx=pi; const p=photos[pi]; document.getElementBy
 function hasTag(p){ return CATS.some(cat=>p.selected[cat].length>0); }
 function updateDot(pos,tagged){ const el=document.getElementById('li'+pos); if(!el) return; const d=el.querySelector('.tagged-dot'); if(d) d.className='tagged-dot'+(tagged?'':' empty'); }
 function updateProgress(){ const t=photos.filter(p=>hasTag(p)).length; document.getElementById('progress-text').textContent=`已貼標 ${t} / ${photos.length}`; }
+
+// ── 右側標籤欄寬度拖拉 ─────────────────────────────
+(function(){
+const rz=document.getElementById('panel-resizer');
+const panel=document.getElementById('tag-panel');
+const saved=parseInt(localStorage.getItem('tagPanelWidth'));
+if(saved>=240&&saved<=720) panel.style.width=saved+'px';
+let dragging=false;
+function setW(clientX){
+let w=window.innerWidth-clientX;
+w=Math.max(240,Math.min(720,w));
+panel.style.width=w+'px';
+try{ localStorage.setItem('tagPanelWidth',w); }catch(_){}
+}
+rz.addEventListener('mousedown',e=>{ dragging=true; rz.classList.add('dragging'); e.preventDefault(); document.body.style.cursor='col-resize'; document.body.style.userSelect='none'; });
+document.addEventListener('mousemove',e=>{ if(dragging) setW(e.clientX); });
+document.addEventListener('mouseup',()=>{ if(dragging){ dragging=false; rz.classList.remove('dragging'); document.body.style.cursor=''; document.body.style.userSelect=''; } });
+rz.addEventListener('touchstart',()=>{ dragging=true; rz.classList.add('dragging'); },{passive:true});
+rz.addEventListener('touchmove',e=>{ if(dragging){ setW(e.touches[0].clientX); e.preventDefault(); } },{passive:false});
+rz.addEventListener('touchend',()=>{ dragging=false; rz.classList.remove('dragging'); });
+})();
 
 let swipeX=null;
 document.getElementById('photo-display').addEventListener('touchstart',e=>{ swipeX=e.touches[0].clientX; },{passive:true});
