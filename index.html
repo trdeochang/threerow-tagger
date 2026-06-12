@@ -456,6 +456,11 @@ const data = photos.map(p=>{ const all=[]; CATS.forEach(c=>all.push(...p.selecte
 for(let i=data.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [data[i],data[j]]=[data[j],data[i]]; }
 data.forEach(r=>rows.push(r));
 XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(rows), 'img');
+// tag sheet：與 threerowV3 相同的標籤庫
+const maxLen = Math.max(...CATS.map(cat=>tagOptions[cat].length), 0);
+const tagRows=[CATS];
+for(let r=0;r<maxLen;r++) tagRows.push(CATS.map(cat=>tagOptions[cat][r]!=null?tagOptions[cat][r]:null));
+XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(tagRows), 'tag');
 XLSX.writeFile(wb2, 'threerow.xlsx');
 }
 
