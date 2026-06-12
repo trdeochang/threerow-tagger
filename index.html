@@ -48,7 +48,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 #photo-list-items { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .photo-item { padding: 9px 10px; border-bottom: 1px solid #f0ede8; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .photo-item.active { background: #f0ede8; }
-.photo-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
+.photo-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
 .photo-info { flex: 1; min-width: 0; }
 .photo-title { font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .photo-num { font-size: 10px; color: #bbb; margin-top: 2px; }
@@ -60,14 +60,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 #photo-title-bar { background: #fff; padding: 10px 16px; border-bottom: 1px solid #e8e6e0; font-size: 13px; color: #444; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 #photo-title-bar strong { color: #1a1a1a; }
 #photo-display { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: hidden; }
-#photo-display img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 20px rgba(0,0,0,0.12); }
+#photo-display img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 20px rgba(0,0,0,0.12); }
 #photo-nav { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; background: #fff; border-top: 1px solid #e8e6e0; flex-shrink: 0; }
 .nav-btn { background: #1a1a1a; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; font-size: 13px; cursor: pointer; }
 .nav-btn:disabled { opacity: 0.25; }
 #nav-index { font-size: 13px; color: #666; min-width: 80px; text-align: center; }
 
 /* Tag panel */
-#tag-panel { width: 500px; flex-shrink: 0; background: #fff; border-left: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
+#tag-panel { width: 320px; flex-shrink: 0; background: #fff; border-left: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
 #tag-panel-top { flex-shrink: 0; }
 #kbd-hint { padding: 7px 14px; background: #fafaf8; border-bottom: 1px solid #f0ede8; font-size: 11px; color: #aaa; }
 kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monospace; font-size: 11px; color: #555; }
@@ -108,6 +108,8 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 .drag-handle { color: #ccc; font-size: 10px; margin-right: 1px; }
 .chip-del { color: #ccc; font-size: 15px; line-height: 1; cursor: pointer; padding: 0 2px; min-width: 18px; text-align: center; }
 .chip-del:active { color: #c00; }
+.chip-move { color: #bbb; font-size: 13px; line-height: 1; cursor: pointer; padding: 0 2px; min-width: 18px; text-align: center; }
+.chip-move:active { color: #1a1a1a; }
 .chip.renaming { padding: 2px 6px; border-style: solid; border-color: #999; background: #fff; }
 .chip-rename-input { border: none; outline: none; background: transparent; font-size: 12px; font-family: inherit; color: #1a1a1a; width: 80px; }
 .add-row { padding: 2px 8px 10px; display: none; gap: 6px; }
@@ -116,8 +118,14 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 .add-row input:focus { border-color: #999; background: #fff; }
 .add-row button { background: #1a1a1a; color: #fff; border: none; border-radius: 20px; padding: 7px 14px; font-size: 12px; cursor: pointer; white-space: nowrap; }
 
-@media (max-width: 900px) { #photo-list { width: 160px; } #tag-panel { width: 360px; } .chip { min-height: 34px; } .btn-sm { min-height: 28px; padding: 4px 8px; } }
-@media (max-width: 700px) { #photo-list { display: none; } #tag-panel { width: 300px; } }
+/* 搬移標籤選單 */
+#move-menu { position: fixed; z-index: 9999; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,0.18); padding: 6px; display: flex; flex-direction: column; gap: 2px; min-width: 150px; }
+#move-menu .mm-title { font-size: 11px; color: #999; padding: 4px 8px; border-bottom: 1px solid #f0ede8; margin-bottom: 2px; }
+#move-menu .mm-item { font-size: 13px; color: #333; padding: 9px 10px; border-radius: 6px; cursor: pointer; }
+#move-menu .mm-item:hover, #move-menu .mm-item:active { background: #f0ede8; }
+
+@media (max-width: 900px) { #photo-list { width: 160px; } #tag-panel { width: 280px; } .chip { min-height: 34px; } .btn-sm { min-height: 28px; padding: 4px 8px; } }
+@media (max-width: 700px) { #photo-list { display: none; } #tag-panel { width: 260px; } }
 
 /* === 標籤搜尋 × 篩選 === */
 #tag-search-wrap { position: relative; flex: 1; max-width: 360px; margin: 0 16px; }
@@ -380,7 +388,7 @@ photos = [];
 for(let i=1;i<imgRows.length;i++){
 const row=imgRows[i];
 const sel={};
-CATS.forEach(cat=>{ sel[cat]=CAT_COLS[cat].map(c=>row[c]).filter(v=>v!=null&&String(v).trim()).map(String); });
+CATS.forEach(cat=>{ sel[cat]=CAT_COLS[cat].map(c=>row[c]).filter(v=>v!=null&&String(v).trim()).flatMap(v=>String(v).split(',')).map(s=>s.trim()).filter(Boolean); });
 photos.push({ idx:i-1, rowIdx:i, title:String(row[0]||''), url:String(row[1]||''),
 filename:String(row[2]||''), tag:String(row[3]||''), targetUrl:String(row[4]||''), selected:sel });
 }
@@ -419,7 +427,7 @@ photos.forEach(p=>{
 const row=imgRows[p.rowIdx]; if(!row) return;
 const allTags=[]; CATS.forEach(cat=>allTags.push(...p.selected[cat]));
 row[3] = allTags.join(',') || null;
-CATS.forEach(cat=>{ const cols=CAT_COLS[cat]; const vals=p.selected[cat]; cols.forEach((c,i)=>{ row[c]=vals[i]!=null?vals[i]:null; }); });
+CATS.forEach(cat=>{ const cols=CAT_COLS[cat]; const vals=p.selected[cat]; cols.forEach(c=>{ row[c]=null; }); row[cols[0]]=vals.length?vals.join(','):null; });
 });
 rawWb.Sheets['img'] = XLSX.utils.aoa_to_sheet(imgRows);
 // Update tag sheet
@@ -483,7 +491,7 @@ tagOptions[cat].forEach((val,i)=>{
 const chip=document.createElement('div');
 if(editMode){
 chip.className='chip edit-mode';
-chip.innerHTML=`<span class="drag-handle">⠿</span><span class="chip-label">${val}</span><span class="chip-del" data-i="${i}">×</span>`;
+chip.innerHTML=`<span class="drag-handle">⠿</span><span class="chip-label">${val}</span><span class="chip-move" data-i="${i}" title="搬移到其他分類">⇄</span><span class="chip-del" data-i="${i}">×</span>`;
 let pt=null;
 chip.addEventListener('touchstart',e=>{ pt=setTimeout(()=>{ pt=null; startRename(cat,i,chip); },600); },{passive:true});
 chip.addEventListener('touchend',()=>{ if(pt){clearTimeout(pt);pt=null;} });
@@ -491,6 +499,9 @@ chip.addEventListener('touchmove',()=>{ if(pt){clearTimeout(pt);pt=null;} });
 chip.addEventListener('dblclick',()=>startRename(cat,i,chip));
 chip.querySelector('.chip-del').addEventListener('click',e=>{ e.stopPropagation(); delTag(cat,i); });
 chip.querySelector('.chip-del').addEventListener('touchend',e=>{ e.preventDefault(); e.stopPropagation(); delTag(cat,i); });
+const mv=chip.querySelector('.chip-move');
+mv.addEventListener('click',e=>{ e.stopPropagation(); showMoveMenu(cat,i,mv); });
+mv.addEventListener('touchend',e=>{ if(touchGuard.moved) return; e.preventDefault(); showMoveMenu(cat,i,mv); });
 chip.draggable=true;
 chip.addEventListener('dragstart',e=>onDS(e,cat,i));
 chip.addEventListener('dragover', e=>onDO(e,cat,i));
@@ -506,6 +517,48 @@ chip.addEventListener('touchend',e=>{ if(touchGuard.moved) return; e.preventDefa
 }
 chip.dataset.i=i; div.appendChild(chip);
 });
+}
+
+// ── 搬移標籤到其他分類 ─────────────────────────────────
+function closeMoveMenu(){ const m=document.getElementById('move-menu'); if(m) m.remove(); }
+function showMoveMenu(srcCat,i,anchor){
+closeMoveMenu();
+const val=tagOptions[srcCat][i];
+const menu=document.createElement('div'); menu.id='move-menu';
+const title=document.createElement('div'); title.className='mm-title'; title.textContent=`「${val}」搬移到…`; menu.appendChild(title);
+CATS.filter(c=>c!==srcCat).forEach(dst=>{
+const item=document.createElement('div'); item.className='mm-item'; item.textContent=dst;
+item.addEventListener('click',e=>{ e.stopPropagation(); closeMoveMenu(); moveTagToCat(srcCat,i,dst); });
+item.addEventListener('touchend',e=>{ e.preventDefault(); e.stopPropagation(); closeMoveMenu(); moveTagToCat(srcCat,i,dst); });
+menu.appendChild(item);
+});
+document.body.appendChild(menu);
+const r=anchor.getBoundingClientRect();
+let top=r.bottom+4, left=r.left;
+const mw=menu.offsetWidth, mh=menu.offsetHeight;
+if(left+mw>window.innerWidth-8) left=window.innerWidth-mw-8;
+if(top+mh>window.innerHeight-8) top=Math.max(8,r.top-mh-4);
+menu.style.top=top+'px'; menu.style.left=left+'px';
+setTimeout(()=>{
+document.addEventListener('click',function h(e){ if(!menu.contains(e.target)) closeMoveMenu(); document.removeEventListener('click',h); });
+document.addEventListener('touchstart',function h(e){ if(!menu.contains(e.target)){ closeMoveMenu(); document.removeEventListener('touchstart',h); } },{passive:true});
+},0);
+}
+function moveTagToCat(srcCat,i,dstCat){
+const val=tagOptions[srcCat][i];
+if(val==null) return;
+const affected=photos.filter(p=>p.selected[srcCat].includes(val));
+if(!confirm(`把「${val}」從「${srcCat}」搬到「${dstCat}」？\n（${affected.length} 張照片的標籤會跟著搬）`)) return;
+tagOptions[srcCat].splice(i,1);
+if(!tagOptions[dstCat].includes(val)) tagOptions[dstCat].push(val);
+affected.forEach(p=>{
+const j=p.selected[srcCat].indexOf(val); if(j>=0) p.selected[srcCat].splice(j,1);
+if(!p.selected[dstCat].includes(val)) p.selected[dstCat].push(val);
+recompute(p);
+});
+if(tagFilter && tagFilter.cat===srcCat && tagFilter.tag===val){ tagFilter.cat=dstCat; updateFilterBanner(); }
+renderChips(srcCat); renderChips(dstCat);
+updatePreview(); updateProgress(); scheduleSave();
 }
 
 function startRename(cat,i,chip){
@@ -545,7 +598,7 @@ function toggleAddRow(cat){ const row=document.getElementById('add-'+cat); const
 function onAddKey(e,cat){ if(e.key==='Enter') addTag(cat); if(e.key==='Escape') document.getElementById('add-'+cat).classList.remove('visible'); }
 function addTag(cat){ const input=document.getElementById('addinput-'+cat); const val=input.value.trim(); if(!val) return; if(tagOptions[cat].includes(val)){input.select();return;} tagOptions[cat].push(val); renderChips(cat); input.value=''; document.getElementById('add-'+cat).classList.remove('visible'); scheduleSave(); }
 function delTag(cat,i){ const val=tagOptions[cat][i]; if(!confirm(`刪除標籤「${val}」？`)) return; tagOptions[cat].splice(i,1); photos.forEach(p=>{ const j=p.selected[cat].indexOf(val); if(j>=0){p.selected[cat].splice(j,1);recompute(p);} }); renderChips(cat); updatePreview(); updateProgress(); scheduleSave(); }
-function toggleEdit(cat){ editModes[cat]=!editModes[cat]; buildSection(cat,null); }
+function toggleEdit(cat){ closeMoveMenu(); editModes[cat]=!editModes[cat]; buildSection(cat,null); }
 
 function onDS(e,cat,i){ dragSrc={cat,i}; e.dataTransfer.effectAllowed='move'; setTimeout(()=>e.target.classList.add('dragging'),0); }
 function onDO(e,cat,i){ e.preventDefault(); if(!dragSrc||dragSrc.cat!==cat) return; clearDropStyles(cat); const r=e.currentTarget.getBoundingClientRect(); e.currentTarget.classList.add(e.clientX<r.left+r.width/2?'drop-before':'drop-after'); }
@@ -714,7 +767,7 @@ document.getElementById('photo-display').addEventListener('touchstart',e=>{ swip
 document.getElementById('photo-display').addEventListener('touchend',e=>{ if(swipeX===null) return; const dx=e.changedTouches[0].clientX-swipeX; if(Math.abs(dx)>60) navigateFiltered(dx<0?1:-1); swipeX=null; });
 function tap(e,fn){ if(touchGuard.moved) return; e.preventDefault(); fn(); }
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape' && pickSourceMode){ cancelPickSource(); return; }
+  if(e.key==='Escape'){ closeMoveMenu(); if(pickSourceMode){ cancelPickSource(); return; } }
   if((e.metaKey||e.ctrlKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undo(); return; }
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
   if(e.key==='ArrowRight') navigateFiltered(1);
