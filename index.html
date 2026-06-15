@@ -39,20 +39,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 #main { display: flex; flex: 1; overflow: hidden; }
 
 /* Photo list */
-#photo-list { width: 124px; flex-shrink: 0; background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
+#photo-list { width: 200px; flex-shrink: 0; background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
 #case-filter { padding: 10px; border-bottom: 1px solid #eee; flex-shrink: 0; }
 #case-filter select { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 7px 8px; font-size: 12px; background: #fafaf8; }
 #filter-bar { padding: 8px 10px; border-bottom: 1px solid #eee; flex-shrink: 0; }
 #filter-bar label { font-size: 11px; color: #999; display: flex; align-items: center; gap: 6px; cursor: pointer; }
 #filter-bar input[type=checkbox] { width: 16px; height: 16px; }
 #photo-list-items { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.photo-item { padding: 8px; border-bottom: 1px solid #f0ede8; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; position: relative; }
+.photo-item { padding: 6px 8px; border-bottom: 1px solid #f0ede8; cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 8px; }
 .photo-item.active { background: #f0ede8; }
-.photo-thumb { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; background: #eee; }
-.photo-info { width: 100%; min-width: 0; }
+.photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; background: #eee; flex-shrink: 0; }
+.photo-info { flex: 1; min-width: 0; }
 .photo-title { font-size: 12px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .photo-num { font-size: 10px; color: #bbb; margin-top: 2px; }
-.tagged-dot { position: absolute; top: 12px; right: 16px; width: 10px; height: 10px; border-radius: 50%; background: #4caf50; box-shadow: 0 0 0 2px #fff; }
+.tagged-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
 .tagged-dot.empty { background: #ddd; }
 
 /* 欄位拖拉條（左照片清單 / 右標籤面板可調寬窄）*/
