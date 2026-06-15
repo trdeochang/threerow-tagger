@@ -39,21 +39,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 #main { display: flex; flex: 1; overflow: hidden; }
 
 /* Photo list */
-#photo-list { width: 200px; flex-shrink: 0; background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
+#photo-list { width: var(--list-w, 220px); flex-shrink: 0; background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
 #case-filter { padding: 10px; border-bottom: 1px solid #eee; flex-shrink: 0; }
 #case-filter select { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 7px 8px; font-size: 12px; background: #fafaf8; }
 #filter-bar { padding: 8px 10px; border-bottom: 1px solid #eee; flex-shrink: 0; }
 #filter-bar label { font-size: 11px; color: #999; display: flex; align-items: center; gap: 6px; cursor: pointer; }
 #filter-bar input[type=checkbox] { width: 16px; height: 16px; }
 #photo-list-items { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.photo-item { padding: 9px 10px; border-bottom: 1px solid #f0ede8; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.photo-item { padding: 8px; border-bottom: 1px solid #f0ede8; cursor: pointer; display: flex; flex-direction: column; align-items: stretch; gap: 5px; position: relative; }
 .photo-item.active { background: #f0ede8; }
-.photo-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
-.photo-info { flex: 1; min-width: 0; }
-.photo-title { font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.photo-thumb { width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 6px; background: #eee; }
+.photo-info { min-width: 0; }
+.photo-title { font-size: 12px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .photo-num { font-size: 10px; color: #bbb; margin-top: 2px; }
-.tagged-dot { width: 7px; height: 7px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
+.tagged-dot { position: absolute; top: 13px; right: 13px; width: 10px; height: 10px; border-radius: 50%; background: #4caf50; box-shadow: 0 0 0 2px #fff; }
 .tagged-dot.empty { background: #ddd; }
+
+/* 欄位拖拉條（左照片清單 / 右標籤面板可調寬窄）*/
+.col-resizer { width: 7px; flex-shrink: 0; cursor: col-resize; background: transparent; position: relative; z-index: 5; touch-action: none; }
+.col-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 2px; background: #e8e6e0; }
+.col-resizer:hover::after, .col-resizer.dragging::after { background: #f0a500; width: 3px; }
 
 /* Photo center */
 #photo-center { flex: 1; display: flex; flex-direction: column; background: #f5f4f0; overflow: hidden; min-width: 0; }
@@ -67,7 +72,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 #nav-index { font-size: 13px; color: #666; min-width: 80px; text-align: center; }
 
 /* Tag panel */
-#tag-panel { width: 320px; flex-shrink: 0; background: #fff; border-left: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
+#tag-panel { width: var(--panel-w, 320px); flex-shrink: 0; background: #fff; border-left: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
 #tag-panel-top { flex-shrink: 0; }
 #kbd-hint { padding: 7px 14px; background: #fafaf8; border-bottom: 1px solid #f0ede8; font-size: 11px; color: #aaa; }
 kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monospace; font-size: 11px; color: #555; }
@@ -123,7 +128,7 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 .add-row button { background: #1a1a1a; color: #fff; border: none; border-radius: 20px; padding: 7px 14px; font-size: 12px; cursor: pointer; white-space: nowrap; }
 
 @media (max-width: 900px) { #photo-list { width: 160px; } #tag-panel { width: 280px; } .chip { min-height: 34px; } .btn-sm { min-height: 28px; padding: 4px 8px; } }
-@media (max-width: 700px) { #photo-list { display: none; } #tag-panel { width: 260px; } }
+@media (max-width: 700px) { #photo-list { display: none; } #tag-panel { width: 260px; } .col-resizer { display: none; } }
 
 /* === 標籤搜尋 × 篩選 === */
 #tag-search-wrap { position: relative; flex: 1; max-width: 360px; margin: 0 16px; }
@@ -183,6 +188,7 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 </div>
 <div id="photo-list-items"></div>
 </div>
+<div class="col-resizer" id="resizer-left" title="拖拉調整照片清單寬度"></div>
 <div id="photo-center">
 <div id="filter-banner">
 <span id="filter-banner-text"></span>
@@ -199,6 +205,7 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 <button class="nav-btn" id="btn-next" onclick="navigateFiltered(1)">下一張 →</button>
 </div>
 </div>
+<div class="col-resizer" id="resizer-right" title="拖拉調整標籤面板寬度"></div>
 <div id="tag-panel">
 <div id="tag-panel-top">
 <div id="kbd-hint">快捷鍵：<kbd>←</kbd><kbd>→</kbd> 切換照片</div>
@@ -726,6 +733,38 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowRight') navigateFiltered(1);
   if(e.key==='ArrowLeft') navigateFiltered(-1);
 });
+
+// ── 欄位拖拉調整寬度（記憶到 localStorage）─────────────
+function setupResizers(){
+  const list = document.getElementById('photo-list');
+  const panel = document.getElementById('tag-panel');
+  try {
+    const lw = localStorage.getItem('tagger-list-w'); if(lw) list.style.width = lw + 'px';
+    const pw = localStorage.getItem('tagger-panel-w'); if(pw) panel.style.width = pw + 'px';
+  } catch(e){}
+  makeResizer(document.getElementById('resizer-left'),  list,  'left',  'tagger-list-w',  120, 480);
+  makeResizer(document.getElementById('resizer-right'), panel, 'right', 'tagger-panel-w', 240, 600);
+}
+function makeResizer(handle, target, side, key, min, max){
+  if(!handle || !target) return;
+  let startX = 0, startW = 0;
+  function down(x){ startX = x; startW = target.getBoundingClientRect().width; handle.classList.add('dragging'); document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; }
+  function move(x){ let dw = x - startX; if(side === 'right') dw = -dw; const w = Math.max(min, Math.min(max, startW + dw)); target.style.width = w + 'px'; }
+  function up(){ handle.classList.remove('dragging'); document.body.style.cursor = ''; document.body.style.userSelect = ''; try { localStorage.setItem(key, Math.round(target.getBoundingClientRect().width)); } catch(e){} }
+  handle.addEventListener('mousedown', e => {
+    e.preventDefault(); down(e.clientX);
+    const mm = ev => move(ev.clientX);
+    const mu = () => { up(); document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
+    document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu);
+  });
+  handle.addEventListener('touchstart', e => {
+    down(e.touches[0].clientX);
+    const tm = ev => { ev.preventDefault(); move(ev.touches[0].clientX); };
+    const te = () => { up(); document.removeEventListener('touchmove', tm); document.removeEventListener('touchend', te); };
+    document.addEventListener('touchmove', tm, { passive:false }); document.addEventListener('touchend', te);
+  }, { passive:true });
+}
+setupResizers();
 </script>
 
 <!-- Google Identity Services -->
