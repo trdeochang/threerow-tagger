@@ -392,7 +392,18 @@ photos = [];
 for(let i=1;i<imgRows.length;i++){
 const row=imgRows[i];
 const sel={};
-CATS.forEach(cat=>{ sel[cat]=CAT_COLS[cat].map(c=>row[c]).filter(v=>v!=null&&String(v).trim()).map(String); });
+// 每個分類欄位可能是「逗號連在一起的一整串」或「一格一個標籤」，
+// 兩種都拆成個別標籤陣列（去重、保留順序）。
+CATS.forEach(cat=>{
+const flat=[];
+CAT_COLS[cat].forEach(c=>{
+const v=row[c];
+if(v!=null && String(v).trim()){
+String(v).split(',').forEach(part=>{ part=part.trim(); if(part && !flat.includes(part)) flat.push(part); });
+}
+});
+sel[cat]=flat;
+});
 photos.push({ idx:i-1, rowIdx:i, title:String(row[0]||''), url:String(row[1]||''),
 filename:String(row[2]||''), tag:String(row[3]||''), targetUrl:String(row[4]||''), selected:sel });
 }
@@ -431,7 +442,9 @@ photos.forEach(p=>{
 const row=imgRows[p.rowIdx]; if(!row) return;
 const allTags=[]; CATS.forEach(cat=>allTags.push(...p.selected[cat]));
 row[3] = allTags.join(',') || null;
-CATS.forEach(cat=>{ const cols=CAT_COLS[cat]; const vals=p.selected[cat]; cols.forEach((c,i)=>{ row[c]=vals[i]!=null?vals[i]:null; }); });
+// 每個分類存成「逗號連在一起的一整串」放在該分類第一欄，其餘欄清空。
+// 不再受舊欄位數限制（例如色調可存多個）。
+CATS.forEach(cat=>{ const cols=CAT_COLS[cat]; const vals=p.selected[cat]; row[cols[0]] = vals.length ? vals.join(',') : null; for(let k=1;k<cols.length;k++) row[cols[k]]=null; });
 });
 rawWb.Sheets['img'] = XLSX.utils.aoa_to_sheet(imgRows);
 // Update tag sheet
