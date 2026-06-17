@@ -46,19 +46,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 #filter-bar label { font-size: 11px; color: #999; display: flex; align-items: center; gap: 6px; cursor: pointer; }
 #filter-bar input[type=checkbox] { width: 16px; height: 16px; }
 #photo-list-items { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.photo-item { padding: 6px 8px; border-bottom: 1px solid #f0ede8; cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.photo-item { padding: 9px 10px; border-bottom: 1px solid #f0ede8; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .photo-item.active { background: #f0ede8; }
-.photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; background: #eee; flex-shrink: 0; }
+.photo-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
 .photo-info { flex: 1; min-width: 0; }
-.photo-title { font-size: 12px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.photo-title { font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .photo-num { font-size: 10px; color: #bbb; margin-top: 2px; }
-.tagged-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
+.tagged-dot { width: 7px; height: 7px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
 .tagged-dot.empty { background: #ddd; }
-
-/* 欄位拖拉條（左照片清單 / 右標籤面板可調寬窄）*/
-.col-resizer { width: 7px; flex-shrink: 0; cursor: col-resize; background: transparent; position: relative; z-index: 5; touch-action: none; }
-.col-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 2px; background: #e8e6e0; }
-.col-resizer:hover::after, .col-resizer.dragging::after { background: #f0a500; width: 3px; }
 
 /* Photo center */
 #photo-center { flex: 1; display: flex; flex-direction: column; background: #f5f4f0; overflow: hidden; min-width: 0; }
@@ -72,7 +67,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 #nav-index { font-size: 13px; color: #666; min-width: 80px; text-align: center; }
 
 /* Tag panel */
-#tag-panel { width: var(--panel-w, 320px); flex-shrink: 0; background: #fff; border-left: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
+#tag-panel { width: 320px; flex-shrink: 0; background: #fff; border-left: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
 #tag-panel-top { flex-shrink: 0; }
 #kbd-hint { padding: 7px 14px; background: #fafaf8; border-bottom: 1px solid #f0ede8; font-size: 11px; color: #aaa; }
 kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monospace; font-size: 11px; color: #555; }
@@ -86,12 +81,6 @@ kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monos
 .btn-copy:hover { background: #f0ede8; }
 .btn-copy:active { background: #e8e3da; }
 .btn-copy.active { background: #fff3c4; border-color: #e0b800; color: #6a5a00; }
-
-/* 隱藏「目前 tag」文字（label + tag 字串），保留複製按鈕。
-   tag 計算邏輯不動，產出 WordPress 版仍正常使用。 */
-#tag-summary .tag-summary-head .label { display: none; }
-#tag-preview { display: none; }
-.tag-summary-head { justify-content: flex-end; margin-bottom: 0; }
 
 /* 選擇來源照片模式 */
 #pick-banner { display: none; padding: 8px 10px; background: #fffbe6; border-bottom: 1px solid #f0e0a0; font-size: 11px; color: #6a5a00; text-align: center; line-height: 1.4; }
@@ -117,6 +106,8 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 .chip.drop-before { box-shadow: -3px 0 0 #1a1a1a; }
 .chip.drop-after { box-shadow: 3px 0 0 #1a1a1a; }
 .drag-handle { color: #ccc; font-size: 10px; margin-right: 1px; }
+.chip-move { color: #bbb; font-size: 13px; line-height: 1; cursor: pointer; padding: 0 3px; min-width: 16px; text-align: center; }
+.chip-move:active { color: #1a8a55; }
 .chip-del { color: #ccc; font-size: 15px; line-height: 1; cursor: pointer; padding: 0 2px; min-width: 18px; text-align: center; }
 .chip-del:active { color: #c00; }
 .chip.renaming { padding: 2px 6px; border-style: solid; border-color: #999; background: #fff; }
@@ -127,8 +118,14 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 .add-row input:focus { border-color: #999; background: #fff; }
 .add-row button { background: #1a1a1a; color: #fff; border: none; border-radius: 20px; padding: 7px 14px; font-size: 12px; cursor: pointer; white-space: nowrap; }
 
+/* 跨分類搬移選單 */
+.move-menu { position: fixed; z-index: 9998; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,0.18); padding: 6px; min-width: 132px; }
+.move-menu .mm-title { font-size: 11px; color: #999; padding: 4px 8px 6px; border-bottom: 1px solid #f0ede8; margin-bottom: 4px; word-break: break-all; }
+.move-menu button { display: block; width: 100%; text-align: left; background: #fff; border: none; border-radius: 5px; padding: 9px 10px; font-size: 13px; color: #333; cursor: pointer; }
+.move-menu button:hover, .move-menu button:active { background: #f0ede8; }
+
 @media (max-width: 900px) { #photo-list { width: 160px; } #tag-panel { width: 280px; } .chip { min-height: 34px; } .btn-sm { min-height: 28px; padding: 4px 8px; } }
-@media (max-width: 700px) { #photo-list { display: none; } #tag-panel { width: 260px; } .col-resizer { display: none; } }
+@media (max-width: 700px) { #photo-list { display: none; } #tag-panel { width: 260px; } }
 
 /* === 標籤搜尋 × 篩選 === */
 #tag-search-wrap { position: relative; flex: 1; max-width: 360px; margin: 0 16px; }
@@ -204,7 +201,6 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 <button class="nav-btn" id="btn-next" onclick="navigateFiltered(1)">下一張 →</button>
 </div>
 </div>
-<div class="col-resizer" id="resizer-right" title="拖拉調整標籤面板寬度"></div>
 <div id="tag-panel">
 <div id="tag-panel-top">
 <div id="kbd-hint">快捷鍵：<kbd>←</kbd><kbd>→</kbd> 切換照片</div>
@@ -392,18 +388,7 @@ photos = [];
 for(let i=1;i<imgRows.length;i++){
 const row=imgRows[i];
 const sel={};
-// 每個分類欄位可能是「逗號連在一起的一整串」或「一格一個標籤」，
-// 兩種都拆成個別標籤陣列（去重、保留順序）。
-CATS.forEach(cat=>{
-const flat=[];
-CAT_COLS[cat].forEach(c=>{
-const v=row[c];
-if(v!=null && String(v).trim()){
-String(v).split(',').forEach(part=>{ part=part.trim(); if(part && !flat.includes(part)) flat.push(part); });
-}
-});
-sel[cat]=flat;
-});
+CATS.forEach(cat=>{ sel[cat]=CAT_COLS[cat].map(c=>row[c]).filter(v=>v!=null&&String(v).trim()).map(String); });
 photos.push({ idx:i-1, rowIdx:i, title:String(row[0]||''), url:String(row[1]||''),
 filename:String(row[2]||''), tag:String(row[3]||''), targetUrl:String(row[4]||''), selected:sel });
 }
@@ -442,9 +427,7 @@ photos.forEach(p=>{
 const row=imgRows[p.rowIdx]; if(!row) return;
 const allTags=[]; CATS.forEach(cat=>allTags.push(...p.selected[cat]));
 row[3] = allTags.join(',') || null;
-// 每個分類存成「逗號連在一起的一整串」放在該分類第一欄，其餘欄清空。
-// 不再受舊欄位數限制（例如色調可存多個）。
-CATS.forEach(cat=>{ const cols=CAT_COLS[cat]; const vals=p.selected[cat]; row[cols[0]] = vals.length ? vals.join(',') : null; for(let k=1;k<cols.length;k++) row[cols[k]]=null; });
+CATS.forEach(cat=>{ const cols=CAT_COLS[cat]; const vals=p.selected[cat]; cols.forEach((c,i)=>{ row[c]=vals[i]!=null?vals[i]:null; }); });
 });
 rawWb.Sheets['img'] = XLSX.utils.aoa_to_sheet(imgRows);
 // Update tag sheet
@@ -508,12 +491,16 @@ tagOptions[cat].forEach((val,i)=>{
 const chip=document.createElement('div');
 if(editMode){
 chip.className='chip edit-mode';
-chip.innerHTML=`<span class="drag-handle">⠿</span><span class="chip-label">${val}</span><span class="chip-del" data-i="${i}">×</span>`;
+chip.innerHTML=`<span class="drag-handle">⠿</span><span class="chip-label">${val}</span><span class="chip-move" data-i="${i}" title="移到其他分類">⇄</span><span class="chip-del" data-i="${i}">×</span>`;
 let pt=null;
 chip.addEventListener('touchstart',e=>{ pt=setTimeout(()=>{ pt=null; startRename(cat,i,chip); },600); },{passive:true});
 chip.addEventListener('touchend',()=>{ if(pt){clearTimeout(pt);pt=null;} });
 chip.addEventListener('touchmove',()=>{ if(pt){clearTimeout(pt);pt=null;} });
 chip.addEventListener('dblclick',()=>startRename(cat,i,chip));
+const mv=chip.querySelector('.chip-move');
+mv.addEventListener('mousedown',e=>e.stopPropagation());
+mv.addEventListener('click',e=>{ e.stopPropagation(); openMoveMenu(cat,i,mv); });
+mv.addEventListener('touchend',e=>{ e.preventDefault(); openMoveMenu(cat,i,mv); });
 chip.querySelector('.chip-del').addEventListener('click',e=>{ e.stopPropagation(); delTag(cat,i); });
 chip.querySelector('.chip-del').addEventListener('touchend',e=>{ e.preventDefault(); e.stopPropagation(); delTag(cat,i); });
 chip.draggable=true;
@@ -531,6 +518,67 @@ chip.addEventListener('touchend',e=>{ if(touchGuard.moved) return; e.preventDefa
 }
 chip.dataset.i=i; div.appendChild(chip);
 });
+}
+
+// ── 跨分類搬移標籤 ────────────────────────────────────────
+let moveMenuEl=null;
+function onMoveMenuOutside(e){ if(moveMenuEl && !moveMenuEl.contains(e.target)) closeMoveMenu(); }
+function closeMoveMenu(){
+if(!moveMenuEl) return;
+moveMenuEl.remove(); moveMenuEl=null;
+document.removeEventListener('mousedown',onMoveMenuOutside,true);
+document.removeEventListener('touchstart',onMoveMenuOutside,true);
+}
+function openMoveMenu(fromCat,fromIdx,anchor){
+closeMoveMenu();
+const val=tagOptions[fromCat][fromIdx];
+if(val==null) return;
+const menu=document.createElement('div'); menu.className='move-menu';
+const title=document.createElement('div'); title.className='mm-title'; title.textContent=`「${val}」移到…`;
+menu.appendChild(title);
+CATS.filter(c=>c!==fromCat).forEach(toCat=>{
+const b=document.createElement('button'); b.textContent=toCat;
+b.addEventListener('mousedown',e=>e.stopPropagation());
+b.addEventListener('click',e=>{ e.stopPropagation(); if(moveTagAcrossCat(fromCat,fromIdx,toCat)) closeMoveMenu(); });
+b.addEventListener('touchend',e=>{ e.preventDefault(); e.stopPropagation(); if(moveTagAcrossCat(fromCat,fromIdx,toCat)) closeMoveMenu(); });
+menu.appendChild(b);
+});
+document.body.appendChild(menu);
+const r=anchor.getBoundingClientRect();
+const mw=menu.offsetWidth, mh=menu.offsetHeight;
+let left=r.left, top=r.bottom+6;
+if(left+mw>window.innerWidth-8) left=window.innerWidth-mw-8;
+if(top+mh>window.innerHeight-8) top=r.top-mh-6;
+if(left<8) left=8; if(top<8) top=8;
+menu.style.left=left+'px'; menu.style.top=top+'px';
+moveMenuEl=menu;
+const ts=document.getElementById('tag-sections');
+if(ts) ts.addEventListener('scroll',closeMoveMenu,{once:true,passive:true});
+setTimeout(()=>{
+document.addEventListener('mousedown',onMoveMenuOutside,true);
+document.addEventListener('touchstart',onMoveMenuOutside,true);
+},0);
+}
+function moveTagAcrossCat(fromCat,fromIdx,toCat){
+const val=tagOptions[fromCat][fromIdx];
+if(val==null) return false;
+if(tagOptions[toCat].includes(val)){ alert(`「${toCat}」已經有同名標籤「${val}」，無法移入`); return false; }
+const cap=CAT_COLS[toCat].length;
+let overflow=0;
+photos.forEach(p=>{ if(p.selected[fromCat].includes(val)){ const newCount=p.selected[toCat].length+(p.selected[toCat].includes(val)?0:1); if(newCount>cap) overflow++; } });
+if(overflow>0 && !confirm(`有 ${overflow} 張照片移到「${toCat}」後會超過該分類欄位上限（${cap} 個），超出的標籤存檔時會被截掉。仍要移動嗎？`)) return false;
+// 移動標籤庫
+tagOptions[fromCat].splice(fromIdx,1);
+tagOptions[toCat].push(val);
+// 移動每張照片的套用
+photos.forEach(p=>{
+const j=p.selected[fromCat].indexOf(val);
+if(j>=0){ p.selected[fromCat].splice(j,1); if(!p.selected[toCat].includes(val)) p.selected[toCat].push(val); recompute(p); }
+});
+buildSection(fromCat,null);
+buildSection(toCat,null);
+updatePreview(); updateProgress(); scheduleSave();
+return true;
 }
 
 function startRename(cat,i,chip){
@@ -570,7 +618,7 @@ function toggleAddRow(cat){ const row=document.getElementById('add-'+cat); const
 function onAddKey(e,cat){ if(e.key==='Enter') addTag(cat); if(e.key==='Escape') document.getElementById('add-'+cat).classList.remove('visible'); }
 function addTag(cat){ const input=document.getElementById('addinput-'+cat); const val=input.value.trim(); if(!val) return; if(tagOptions[cat].includes(val)){input.select();return;} tagOptions[cat].push(val); renderChips(cat); input.value=''; document.getElementById('add-'+cat).classList.remove('visible'); scheduleSave(); }
 function delTag(cat,i){ const val=tagOptions[cat][i]; if(!confirm(`刪除標籤「${val}」？`)) return; tagOptions[cat].splice(i,1); photos.forEach(p=>{ const j=p.selected[cat].indexOf(val); if(j>=0){p.selected[cat].splice(j,1);recompute(p);} }); renderChips(cat); updatePreview(); updateProgress(); scheduleSave(); }
-function toggleEdit(cat){ editModes[cat]=!editModes[cat]; buildSection(cat,null); }
+function toggleEdit(cat){ closeMoveMenu(); editModes[cat]=!editModes[cat]; buildSection(cat,null); }
 
 function onDS(e,cat,i){ dragSrc={cat,i}; e.dataTransfer.effectAllowed='move'; setTimeout(()=>e.target.classList.add('dragging'),0); }
 function onDO(e,cat,i){ e.preventDefault(); if(!dragSrc||dragSrc.cat!==cat) return; clearDropStyles(cat); const r=e.currentTarget.getBoundingClientRect(); e.currentTarget.classList.add(e.clientX<r.left+r.width/2?'drop-before':'drop-after'); }
@@ -739,41 +787,13 @@ document.getElementById('photo-display').addEventListener('touchstart',e=>{ swip
 document.getElementById('photo-display').addEventListener('touchend',e=>{ if(swipeX===null) return; const dx=e.changedTouches[0].clientX-swipeX; if(Math.abs(dx)>60) navigateFiltered(dx<0?1:-1); swipeX=null; });
 function tap(e,fn){ if(touchGuard.moved) return; e.preventDefault(); fn(); }
 document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') closeMoveMenu();
   if(e.key==='Escape' && pickSourceMode){ cancelPickSource(); return; }
   if((e.metaKey||e.ctrlKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undo(); return; }
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
   if(e.key==='ArrowRight') navigateFiltered(1);
   if(e.key==='ArrowLeft') navigateFiltered(-1);
 });
-
-// ── 欄位拖拉調整寬度（記憶到 localStorage）─────────────
-function setupResizers(){
-  const panel = document.getElementById('tag-panel');
-  try {
-    const pw = localStorage.getItem('tagger-panel-w'); if(pw) panel.style.width = pw + 'px';
-  } catch(e){}
-  makeResizer(document.getElementById('resizer-right'), panel, 'right', 'tagger-panel-w', 240, 600);
-}
-function makeResizer(handle, target, side, key, min, max){
-  if(!handle || !target) return;
-  let startX = 0, startW = 0;
-  function down(x){ startX = x; startW = target.getBoundingClientRect().width; handle.classList.add('dragging'); document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; }
-  function move(x){ let dw = x - startX; if(side === 'right') dw = -dw; const w = Math.max(min, Math.min(max, startW + dw)); target.style.width = w + 'px'; }
-  function up(){ handle.classList.remove('dragging'); document.body.style.cursor = ''; document.body.style.userSelect = ''; try { localStorage.setItem(key, Math.round(target.getBoundingClientRect().width)); } catch(e){} }
-  handle.addEventListener('mousedown', e => {
-    e.preventDefault(); down(e.clientX);
-    const mm = ev => move(ev.clientX);
-    const mu = () => { up(); document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
-    document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu);
-  });
-  handle.addEventListener('touchstart', e => {
-    down(e.touches[0].clientX);
-    const tm = ev => { ev.preventDefault(); move(ev.touches[0].clientX); };
-    const te = () => { up(); document.removeEventListener('touchmove', tm); document.removeEventListener('touchend', te); };
-    document.addEventListener('touchmove', tm, { passive:false }); document.addEventListener('touchend', te);
-  }, { passive:true });
-}
-setupResizers();
 </script>
 
 <!-- Google Identity Services -->
