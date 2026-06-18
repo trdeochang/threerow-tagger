@@ -215,7 +215,7 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 <div class="col-resizer" id="resizer-right" title="拖拉調整標籤面板寬度"></div>
 <div id="tag-panel">
 <div id="tag-panel-top">
-<div id="kbd-hint">快捷鍵：<kbd>←</kbd><kbd>→</kbd> 切換照片</div>
+<div id="kbd-hint">快捷鍵：<kbd>←</kbd><kbd>→</kbd> 切換照片　<kbd>PgUp</kbd><kbd>PgDn</kbd> 切換作品</div>
 <div id="tag-summary">
 <div class="tag-summary-head">
 <div class="label">目前 tag</div>
@@ -784,6 +784,28 @@ function hideSearchResults(){
 }
 
 function navigateFiltered(d){ goTo(filteredPos+d); }
+
+// ── PageUp/PageDown 快速切換作品（案件）─────────────────
+// PageUp = 上一個作品、PageDown = 下一個作品。
+// 依 case-select 的選項順序移動；若目前是「全部案件」則以當前照片的案名當基準。
+function navigateCase(d){
+  const cs=document.getElementById('case-select');
+  if(!cs) return;
+  const cases=[...cs.options].map(o=>o.value).filter(v=>v); // 排除「全部案件」
+  if(!cases.length) return;
+  let curCase=cs.value;
+  if(!curCase){
+    const p=photos[filteredIndices[filteredPos]];
+    curCase=p?p.title:'';
+  }
+  let i=cases.indexOf(curCase);
+  i = (i<0) ? (d>0?0:cases.length-1) : Math.max(0,Math.min(cases.length-1,i+d));
+  if(cs.value===cases[i] && curCase===cases[i]) return; // 已在頭/尾且無「全部案件」狀態，無變化
+  cs.value=cases[i];
+  tagFilter=null;      // 清掉標籤篩選避免衝突
+  filterByCase();
+}
+
 function copyFromPrev(){
 if(filteredPos<=0){ alert('已經是第一張，沒有上一張可以複製'); return; }
 snapshot();
@@ -812,6 +834,8 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape' && pickSourceMode){ cancelPickSource(); return; }
   if((e.metaKey||e.ctrlKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undo(); return; }
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if(e.key==='PageUp'){ e.preventDefault(); navigateCase(-1); return; }
+  if(e.key==='PageDown'){ e.preventDefault(); navigateCase(1); return; }
   if(e.key==='ArrowRight') navigateFiltered(1);
   if(e.key==='ArrowLeft') navigateFiltered(-1);
 });
