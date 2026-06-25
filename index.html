@@ -215,7 +215,7 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 <div class="col-resizer" id="resizer-right" title="拖拉調整標籤面板寬度"></div>
 <div id="tag-panel">
 <div id="tag-panel-top">
-<div id="kbd-hint">快捷鍵：<kbd>←</kbd><kbd>→</kbd> 切換照片　<kbd>PgUp</kbd><kbd>PgDn</kbd> 切換作品</div>
+<div id="kbd-hint">快捷鍵：<kbd>←</kbd><kbd>→</kbd> 切換照片</div>
 <div id="tag-summary">
 <div class="tag-summary-head">
 <div class="label">目前 tag</div>
@@ -238,12 +238,17 @@ const CLIENT_ID = '815417564539-2qtnkrbpii7cvmsi4jghpmg75177hv5a.apps.googleuser
 const FILE_ID = '1Li4lfYQMrdHS7WIRSjWOnrOut4Awp70l';
 const SCOPES = 'https://www.googleapis.com/auth/drive';
 
-const CATS = ['空間','建材','軟裝','工程','生活','色調'];
+// 主分類顯示名稱與順序（2026-06-25 改名 + 重排）
+const CATS = ['專案屬性','生活情境','空間氛圍','工程硬裝','風格軟裝','細部建材'];
+// 分類 → img sheet 欄位（沿用原欄位，改名不動已貼好的資料）
 const CAT_COLS = {
-'空間':[5,6,7,8,9], '建材':[10,11,12,13,14,15,16,17,18,19],
-'軟裝':[20,21,22,23,24,25], '工程':[26,27,28,29,30,31,32,33,34,35,36],
-'生活':[37,38,39,40,41,42,43,44,45], '色調':[46]
+'專案屬性':[5,6,7,8,9], '生活情境':[37,38,39,40,41,42,43,44,45],
+'空間氛圍':[46], '工程硬裝':[26,27,28,29,30,31,32,33,34,35,36],
+'風格軟裝':[20,21,22,23,24,25], '細部建材':[10,11,12,13,14,15,16,17,18,19]
 };
+// 新分類名 → 舊分類名：用於讀取尚未遷移的 tag sheet 表頭。
+// 首次載入後第一次 autosave 會把 tag sheet 表頭存成新名，之後就用得到新名。
+const LEGACY_CAT = {'專案屬性':'空間','生活情境':'生活','空間氛圍':'色調','工程硬裝':'工程','風格軟裝':'軟裝','細部建材':'建材'};
 
 let photos=[], tagOptions={}, editModes={}, currentIdx=0;
 let filteredIndices=[], filteredPos=0, dragSrc=null, saveTimer=null;
@@ -391,7 +396,8 @@ const imgRows = XLSX.utils.sheet_to_json(rawWb.Sheets['img'], {header:1});
 const tagRows = XLSX.utils.sheet_to_json(rawWb.Sheets['tag'], {header:1});
 const tagHeader = tagRows[0]||[];
 CATS.forEach(cat=>{
-const ci = tagHeader.indexOf(cat);
+let ci = tagHeader.indexOf(cat);
+if(ci<0 && LEGACY_CAT[cat]) ci = tagHeader.indexOf(LEGACY_CAT[cat]); // 相容尚未遷移的舊表頭
 tagOptions[cat] = ci>=0
 ? tagRows.slice(1).map(r=>r[ci]).filter(v=>v!=null&&String(v).trim()).map(String)
 : [];
@@ -784,28 +790,6 @@ function hideSearchResults(){
 }
 
 function navigateFiltered(d){ goTo(filteredPos+d); }
-
-// ── PageUp/PageDown 快速切換作品（案件）─────────────────
-// PageUp = 上一個作品、PageDown = 下一個作品。
-// 依 case-select 的選項順序移動；若目前是「全部案件」則以當前照片的案名當基準。
-function navigateCase(d){
-  const cs=document.getElementById('case-select');
-  if(!cs) return;
-  const cases=[...cs.options].map(o=>o.value).filter(v=>v); // 排除「全部案件」
-  if(!cases.length) return;
-  let curCase=cs.value;
-  if(!curCase){
-    const p=photos[filteredIndices[filteredPos]];
-    curCase=p?p.title:'';
-  }
-  let i=cases.indexOf(curCase);
-  i = (i<0) ? (d>0?0:cases.length-1) : Math.max(0,Math.min(cases.length-1,i+d));
-  if(cs.value===cases[i] && curCase===cases[i]) return; // 已在頭/尾且無「全部案件」狀態，無變化
-  cs.value=cases[i];
-  tagFilter=null;      // 清掉標籤篩選避免衝突
-  filterByCase();
-}
-
 function copyFromPrev(){
 if(filteredPos<=0){ alert('已經是第一張，沒有上一張可以複製'); return; }
 snapshot();
@@ -834,8 +818,6 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape' && pickSourceMode){ cancelPickSource(); return; }
   if((e.metaKey||e.ctrlKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undo(); return; }
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
-  if(e.key==='PageUp'){ e.preventDefault(); navigateCase(-1); return; }
-  if(e.key==='PageDown'){ e.preventDefault(); navigateCase(1); return; }
   if(e.key==='ArrowRight') navigateFiltered(1);
   if(e.key==='ArrowLeft') navigateFiltered(-1);
 });
