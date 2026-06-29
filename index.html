@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -74,7 +75,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans
 /* Tag panel */
 #tag-panel { width: var(--panel-w, 320px); flex-shrink: 0; background: #fff; border-left: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
 #tag-panel-top { flex-shrink: 0; }
-#kbd-hint { padding: 7px 14px; background: #fafaf8; border-bottom: 1px solid #f0ede8; font-size: 11px; color: #aaa; }
+#kbd-hint { font-size: 11px; color: rgba(255,255,255,0.55); white-space: nowrap; }
 kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monospace; font-size: 11px; color: #555; }
 #tag-summary { padding: 9px 14px; border-bottom: 1px solid #f0ede8; }
 #tag-summary .label { font-size: 11px; color: #999; margin-bottom: 3px; }
@@ -91,6 +92,7 @@ kbd { background: #eee; border-radius: 3px; padding: 1px 5px; font-family: monos
    tag 計算邏輯不動，產出 WordPress 版仍正常使用。 */
 #tag-summary .tag-summary-head .label { display: none; }
 #tag-preview { display: none; }
+    #photo-title-bar { display: none; }
 .tag-summary-head { justify-content: flex-end; margin-bottom: 0; }
 
 /* 選擇來源照片模式 */
@@ -181,6 +183,9 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 <div class="topbar-right">
 <span id="save-status"></span>
 <span id="progress-text"></span>
+<span id="kbd-hint">←→ 切照片 · PgUp/PgDn 切作品</span>
+<button class="btn-copy" id="btn-copy-prev" onclick="copyFromPrev()" title="把上一張的標籤覆蓋過來">⤵ 上一張</button>
+<button class="btn-copy" id="btn-copy-pick" onclick="togglePickSource()" title="從指定照片複製標籤">⤵ 指定</button>
 <button class="btn-top" id="btn-undo" onclick="undo()" disabled title="無可復原動作">⤺ 復原</button>
 <button class="btn-top accent" onclick="exportWP()">產出 WordPress 版</button>
 </div>
@@ -214,19 +219,7 @@ body.pick-source-mode .photo-item:hover { background: #fff8e1; box-shadow: inset
 </div>
 <div class="col-resizer" id="resizer-right" title="拖拉調整標籤面板寬度"></div>
 <div id="tag-panel">
-<div id="tag-panel-top">
-<div id="kbd-hint">快捷鍵：<kbd>←</kbd><kbd>→</kbd> 切換照片</div>
-<div id="tag-summary">
-<div class="tag-summary-head">
-<div class="label">目前 tag</div>
-<div class="tag-summary-actions">
-<button class="btn-copy" id="btn-copy-prev" onclick="copyFromPrev()" title="把上一張的標籤覆蓋過來">⤵ 上一張</button>
-<button class="btn-copy" id="btn-copy-pick" onclick="togglePickSource()" title="從指定照片複製標籤">⤵ 指定</button>
-</div>
-</div>
-<div class="value empty" id="tag-preview">（尚未選擇）</div>
-</div>
-</div>
+<div class="value empty" id="tag-preview" style="display:none">（尚未選擇）</div>
 <div id="tag-sections"></div>
 </div>
 </div>
@@ -795,6 +788,22 @@ function hideSearchResults(){
 }
 
 function navigateFiltered(d){ goTo(filteredPos+d); }
+function navigateCase(dir){
+  if(!filteredIndices || !filteredIndices.length) return;
+  const t = photos[filteredIndices[filteredPos]].title;
+  let pos = filteredPos;
+  if(dir>0){
+    while(pos<filteredIndices.length-1 && photos[filteredIndices[pos]].title===t) pos++;
+  } else {
+    while(pos>0 && photos[filteredIndices[pos-1]].title===t) pos--;
+    if(pos===filteredPos && pos>0){
+      pos--;
+      const pt = photos[filteredIndices[pos]].title;
+      while(pos>0 && photos[filteredIndices[pos-1]].title===pt) pos--;
+    }
+  }
+  goTo(pos);
+}
 function copyFromPrev(){
 if(filteredPos<=0){ alert('已經是第一張，沒有上一張可以複製'); return; }
 snapshot();
@@ -825,6 +834,8 @@ document.addEventListener('keydown',e=>{
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
   if(e.key==='ArrowRight') navigateFiltered(1);
   if(e.key==='ArrowLeft') navigateFiltered(-1);
+  if(e.key==='PageDown'){ e.preventDefault(); navigateCase(1); }
+  if(e.key==='PageUp'){ e.preventDefault(); navigateCase(-1); }
 });
 
 // ── 欄位拖拉調整寬度（記憶到 localStorage）─────────────
