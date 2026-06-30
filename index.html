@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -676,6 +675,10 @@ clearDropStyles(cat); renderChips(cat); scheduleSave();
 
 function filterByCase(){
 if(pickSourceMode) cancelPickSource();
+// 選完案件 / 勾選後讓下拉與勾選框失焦，否則鍵盤焦點卡在 <select> 上，
+// 方向鍵與 PgUp/PgDn 會被守門條件吃掉、無法切換照片或作品（只有剛開頁 body 有焦點才正常）。
+const _cs=document.getElementById('case-select'); if(_cs && document.activeElement===_cs) _cs.blur();
+const _su=document.getElementById('show-untagged'); if(_su && document.activeElement===_su) _su.blur();
 const cv=document.getElementById('case-select').value; const uo=document.getElementById('show-untagged').checked;
 filteredIndices=photos.map((_,i)=>i).filter(i=>{
   const p=photos[i];
@@ -789,6 +792,18 @@ function hideSearchResults(){
 
 function navigateFiltered(d){ goTo(filteredPos+d); }
 function navigateCase(dir){
+  if(!photos.length) return;
+  const sel = document.getElementById('case-select');
+  // 已選定特定作品（下拉有值）：PgUp/PgDn 直接把下拉換到相鄰的作品。
+  if(sel && sel.value){
+    const titles = [...new Set(photos.map(p=>p.title))];
+    let i = titles.indexOf(sel.value);
+    if(i < 0) return;
+    const ni = Math.min(titles.length-1, Math.max(0, i + (dir>0?1:-1)));
+    if(ni !== i){ sel.value = titles[ni]; filterByCase(); }
+    return;
+  }
+  // 全部案件模式：在目前清單中跨標題跳到上/下一個作品。
   if(!filteredIndices || !filteredIndices.length) return;
   const t = photos[filteredIndices[filteredPos]].title;
   let pos = filteredPos;
@@ -831,9 +846,11 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape') closeMoveMenu();
   if(e.key==='Escape' && pickSourceMode){ cancelPickSource(); return; }
   if((e.metaKey||e.ctrlKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undo(); return; }
-  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
-  if(e.key==='ArrowRight') navigateFiltered(1);
-  if(e.key==='ArrowLeft') navigateFiltered(-1);
+  // 只在「文字輸入框」攔截，不擋 <select>：否則選完作品後焦點停在下拉，
+  // 方向鍵 / PgUp / PgDn 會被吃掉，無法切換照片或作品。
+  if(['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+  if(e.key==='ArrowRight'){ e.preventDefault(); navigateFiltered(1); }
+  if(e.key==='ArrowLeft'){ e.preventDefault(); navigateFiltered(-1); }
   if(e.key==='PageDown'){ e.preventDefault(); navigateCase(1); }
   if(e.key==='PageUp'){ e.preventDefault(); navigateCase(-1); }
 });
