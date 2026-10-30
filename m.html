@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -139,6 +138,76 @@ body.pick-source-mode .photo-item:active { background: #fff8e1; }
 .move-menu .mm-title { font-size: 12px; color: #999; padding: 6px 10px 8px; border-bottom: 1px solid #f0ede8; margin-bottom: 4px; word-break: break-all; }
 .move-menu button { display: block; width: 100%; text-align: left; background: #fff; border: none; border-radius: 6px; padding: 12px 12px; font-size: 15px; color: #333; cursor: pointer; }
 .move-menu button:active { background: #f0ede8; }
+
+/* ════════════════════════════════════════════════════════
+   iPhone Duo 內螢幕全展開（7.6″，橫拿 890×626 pt／直拿 626×890 pt）
+   以摺痕為界：一頁看照片，一頁貼標籤，摺痕上不放任何按鈕。
+   摺起來用外螢幕時就是上面的手機版，不用重新整理。
+   body.duo-land / body.duo-port 由 applyDuoLayout() 判斷後加上；
+   網址加 ?duo=1 可在 iPad／電腦上強制預覽展開版，?duo=0 強制手機版。
+   ════════════════════════════════════════════════════════ */
+:root {
+  --fold-gap: 14px;                                  /* 摺痕兩側留白 */
+  --fold-x: env(viewport-segment-right 0 0, 50vw);   /* 瀏覽器支援 Viewport Segments 就用實際摺痕位置 */
+  --fold-y: env(viewport-segment-bottom 0 0, 50dvh);
+  --head-h: calc(50px + env(safe-area-inset-top));
+}
+#btn-undo-duo, #cat-tabs, #sel-strip { display: none; }
+#btn-undo-duo:disabled { opacity: 0.3; }
+
+/* ── 展開共用：分類跳轉列＋這張已貼的標籤 ── */
+body.duo #btn-undo-duo { display: flex; }
+body.duo #cat-tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); flex-shrink: 0; background: #fff; border-bottom: 1px solid #f0ede8; }
+.ct { border: 0; border-bottom: 2px solid transparent; background: none; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-family: inherit; color: #999; cursor: pointer; touch-action: manipulation; }
+.ct-name { font-size: 12px; white-space: nowrap; }
+.ct-n { font-size: 11px; color: #ccc; min-height: 14px; font-variant-numeric: tabular-nums; }
+.ct.has .ct-n { color: #1a1a1a; font-weight: 600; }
+.ct.on { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+body.duo #sel-strip { display: flex; align-items: center; gap: 6px; min-height: 46px; padding: 7px 10px; flex-shrink: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; background: #faf9f6; border-bottom: 1px solid #e8e6e0; }
+#sel-strip::-webkit-scrollbar { display: none; }
+.ss-label { font-size: 11px; color: #999; flex-shrink: 0; }
+.ss-empty { font-size: 12px; color: #bbb; white-space: nowrap; }
+.ss-chip { flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; padding: 6px 9px 6px 12px; border: 0; border-radius: 16px; background: #1a1a1a; color: #fff; font-size: 13px; font-family: inherit; white-space: nowrap; cursor: pointer; }
+.ss-chip .x { opacity: 0.5; font-size: 15px; line-height: 1; }
+.ss-chip:active { background: #555; }
+
+/* ── 橫拿：左頁照片＋縮圖，右頁標籤 ── */
+body.duo-land #app.ready {
+  display: grid;
+  grid-template-columns: minmax(0, calc(var(--fold-x) - var(--fold-gap) / 2)) var(--fold-gap) minmax(0, 1fr);
+  grid-template-rows: var(--head-h) minmax(0, 1.7fr) auto minmax(150px, 1fr);
+}
+body.duo-land #app.ready::before { content: ''; grid-area: 1 / 2; background: #1a1a1a; }
+body.duo-land #app.ready::after { content: ''; grid-area: 2 / 2 / -1 / 3; background: linear-gradient(90deg, #ece9e3, #dcd8cf 50%, #ece9e3); }
+body.duo-land #photo-list { display: contents; }
+body.duo-land .drawer-head, body.duo-land #btn-drawer, body.duo-land #hdivider, body.duo-land #drawer-overlay { display: none !important; }
+/* 左頁頂列：作品下拉＋只看未貼標，和右頁黑色頂列連成一條 */
+body.duo-land #case-filter { grid-area: 1 / 1; display: flex; align-items: center; background: #1a1a1a; border: 0; padding: env(safe-area-inset-top) 124px 0 calc(10px + env(safe-area-inset-left)); }
+body.duo-land #case-filter select { -webkit-appearance: none; appearance: none; color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 9px 30px 9px 12px; background: rgba(255,255,255,0.12) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center; }
+body.duo-land #filter-bar { grid-area: 1 / 1; justify-self: end; align-self: end; height: 50px; display: flex; align-items: center; padding: 0 12px 0 0; border: 0; z-index: 1; }
+body.duo-land #filter-bar label { color: rgba(255,255,255,0.75); }
+body.duo-land #filter-bar input[type=checkbox] { accent-color: #f0a500; }
+body.duo-land #photo-wrap { grid-area: 2 / 1; min-height: 0; padding-left: env(safe-area-inset-left); }
+body.duo-land #photo-title-bar { padding: 6px 12px; }
+body.duo-land #pick-banner { grid-area: 3 / 1; }
+/* 左頁下半：同篩選條件的縮圖格，取代手機版的抽屜清單 */
+body.duo-land #photo-list-items { grid-area: 4 / 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; align-content: start; padding: 10px 10px calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left)); background: #fff; border-top: 1px solid #e8e6e0; }
+body.duo-land .photo-item, body.duo-land .photo-item.active { position: relative; flex-direction: column; align-items: stretch; gap: 3px; padding: 0; border: 0; background: none; }
+body.duo-land .photo-thumb { width: 100%; height: auto; aspect-ratio: 3 / 2; border-radius: 6px; }
+body.duo-land .photo-item.active .photo-thumb { box-shadow: 0 0 0 3px #1a1a1a; }
+body.duo-land .photo-title { display: none; }
+/* 檔名太長時從前面截，留住最後的編號 */
+body.duo-land .photo-num { margin: 0; font-size: 10px; color: #999; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; }
+body.duo-land .tagged-dot { position: absolute; top: 5px; right: 5px; box-shadow: 0 0 0 2px #fff; }
+body.duo-land.pick-source-mode #photo-list-items { box-shadow: inset 0 0 0 2px #f0a500; }
+body.duo-land #topbar { grid-area: 1 / 3; padding-left: 10px; padding-right: calc(8px + env(safe-area-inset-right)); }
+body.duo-land #topmenu { right: calc(8px + env(safe-area-inset-right)); }
+body.duo-land #tag-panel { grid-area: 2 / 3 / -1 / 4; padding-right: env(safe-area-inset-right); }
+
+/* ── 直拿：摺痕以上照片，以下標籤；分隔條固定在摺痕上 ── */
+body.duo-port #photo-wrap { flex: 0 0 calc(var(--fold-y) - var(--fold-gap) / 2 - var(--head-h)) !important; }
+body.duo-port #hdivider { height: var(--fold-gap); pointer-events: none; background: linear-gradient(180deg, #ece9e3, #dcd8cf 50%, #ece9e3); }
+body.duo-port #hdivider::after { display: none; }
 </style>
 </head>
 <body>
@@ -159,6 +228,7 @@ body.pick-source-mode .photo-item:active { background: #fff8e1; }
 <div id="tag-search-results"></div>
 </div>
 <span id="save-status"></span>
+<button class="icon-btn" id="btn-undo-duo" onclick="undo()" disabled title="復原">⤺</button>
 <button class="icon-btn" id="btn-menu" title="更多">⋯</button>
 </div>
 
@@ -218,6 +288,8 @@ body.pick-source-mode .photo-item:active { background: #fff8e1; }
 </div>
 <div class="value empty" id="tag-preview">（尚未選擇）</div>
 </div>
+<div id="cat-tabs"></div>
+<div id="sel-strip"></div>
 <div id="tag-sections"></div>
 </div>
 </div>
@@ -675,6 +747,10 @@ clearDropStyles(cat); renderChips(cat); scheduleSave();
 
 function filterByCase(){
 if(pickSourceMode) cancelPickSource();
+// 選完案件 / 勾選後讓下拉與勾選框失焦，否則鍵盤焦點卡在 <select> 上，
+// 方向鍵與 PgUp/PgDn 會被下拉吃掉、無法切換照片（只有剛開頁時 body 有焦點才正常）。
+const _cs=document.getElementById('case-select'); if(_cs) _cs.blur();
+const _su=document.getElementById('show-untagged'); if(_su) _su.blur();
 const cv=document.getElementById('case-select').value; const uo=document.getElementById('show-untagged').checked;
 filteredIndices=photos.map((_,i)=>i).filter(i=>{
   const p=photos[i];
@@ -815,8 +891,8 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape' && pickSourceMode){ cancelPickSource(); return; }
   if((e.metaKey||e.ctrlKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undo(); return; }
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
-  if(e.key==='ArrowRight') navigateFiltered(1);
-  if(e.key==='ArrowLeft') navigateFiltered(-1);
+  if(e.key==='ArrowRight'||e.key==='PageDown'){ e.preventDefault(); navigateFiltered(1); }
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); navigateFiltered(-1); }
 });
 
 // ── 欄位拖拉調整寬度（記憶到 localStorage）─────────────
@@ -875,6 +951,99 @@ document.addEventListener('click', e => { if(topmenu.classList.contains('open') 
   handle.addEventListener('mousedown', e=>{ e.preventDefault(); down(e.clientY); const mm=ev=>move(ev.clientY); const mu=()=>{ up(); document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); }; document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu); });
   handle.addEventListener('touchstart', e=>{ down(e.touches[0].clientY); const tm=ev=>{ ev.preventDefault(); move(ev.touches[0].clientY); }; const te=()=>{ up(); document.removeEventListener('touchmove',tm); document.removeEventListener('touchend',te); }; document.addEventListener('touchmove',tm,{passive:false}); document.addEventListener('touchend',te); }, {passive:true});
 })();
+
+// ════════════════════════════════════════════════════════
+// iPhone Duo 內螢幕全展開（CSS 見 body.duo-land / body.duo-port）
+// ════════════════════════════════════════════════════════
+// 內螢幕 1878×2670 px @3x = 626×890 pt；外螢幕 466×678 pt 不會命中，維持手機版。
+// 高度留了 Safari 工具列的空間。若瀏覽器支援 Viewport Segments，直接以摺痕判斷。
+const DUO_Q = {
+  land: '(horizontal-viewport-segments: 2), (pointer: coarse) and (min-width: 820px) and (max-width: 960px) and (min-height: 500px) and (max-height: 700px)',
+  port: '(vertical-viewport-segments: 2), (pointer: coarse) and (min-width: 560px) and (max-width: 700px) and (min-height: 700px) and (max-height: 960px)'
+};
+const DUO_FORCE = new URLSearchParams(location.search).get('duo'); // '1' 強制展開版，'0' 強制手機版
+function applyDuoLayout(){
+  let mode = '';
+  if (DUO_FORCE === '1') mode = innerWidth >= innerHeight ? 'land' : 'port';
+  else if (DUO_FORCE !== '0') mode = matchMedia(DUO_Q.land).matches ? 'land' : matchMedia(DUO_Q.port).matches ? 'port' : '';
+  const b = document.body;
+  if ((b.dataset.duo || '') === mode) return;
+  b.dataset.duo = mode;
+  b.classList.toggle('duo', !!mode);
+  b.classList.toggle('duo-land', mode === 'land');
+  b.classList.toggle('duo-port', mode === 'port');
+  if (mode === 'land') closeDrawer(); // 橫拿時縮圖常駐左頁，不需要抽屜
+  renderDuoBar();
+  requestAnimationFrame(syncCatTab);
+  const ae = document.getElementById('li'+filteredPos); if (ae) ae.scrollIntoView({ block:'nearest' });
+}
+
+// 右頁上方兩條：分類跳轉（數字＝這張在該分類貼了幾個）、這張已貼的標籤（點一下移除）
+function renderDuoBar(){
+  const tabs = document.getElementById('cat-tabs'), strip = document.getElementById('sel-strip');
+  const p = photos[currentIdx];
+  if (!tabs || !strip || !p) return;
+  if (!tabs.children.length) {
+    CATS.forEach(cat => {
+      const b = document.createElement('button');
+      b.className = 'ct'; b.dataset.cat = cat;
+      b.innerHTML = '<span class="ct-name"></span><span class="ct-n"></span>';
+      b.querySelector('.ct-name').textContent = cat;
+      b.addEventListener('click', () => jumpToCat(cat));
+      tabs.appendChild(b);
+    });
+    requestAnimationFrame(syncCatTab); // 第一次建立時 #app 可能還沒顯示，等下一幀再算位置
+  }
+  CATS.forEach((cat, i) => {
+    const n = p.selected[cat].length, b = tabs.children[i];
+    b.classList.toggle('has', n > 0);
+    b.querySelector('.ct-n').textContent = n || '·';
+  });
+  strip.innerHTML = '';
+  const total = CATS.reduce((s, cat) => s + p.selected[cat].length, 0);
+  if (!total) { strip.innerHTML = '<span class="ss-empty">這張還沒貼標籤</span>'; return; }
+  const lab = document.createElement('span'); lab.className = 'ss-label'; lab.textContent = `已貼 ${total}`;
+  strip.appendChild(lab);
+  CATS.forEach(cat => p.selected[cat].forEach(val => {
+    const b = document.createElement('button'); b.className = 'ss-chip'; b.title = `${cat}・點一下移除`;
+    const t = document.createElement('span'); t.textContent = val;
+    const x = document.createElement('span'); x.className = 'x'; x.textContent = '×';
+    b.append(t, x);
+    b.addEventListener('click', () => toggleTag(cat, val));
+    strip.appendChild(b);
+  }));
+}
+
+let catSpyHold = 0; // 點最後一個分類時捲不到頂，短暫鎖住高亮，不讓捲動偵測改回上一個
+function markCatTab(cat){ document.querySelectorAll('#cat-tabs .ct').forEach(b => b.classList.toggle('on', b.dataset.cat === cat)); }
+function jumpToCat(cat){
+  const ts = document.getElementById('tag-sections'), sec = document.getElementById('sec-'+cat);
+  if (!ts || !sec) return;
+  catSpyHold = Date.now() + 300;
+  markCatTab(cat);
+  // 直接跳，不用平滑捲動：標籤上百個，平滑捲要跑好幾千 px，反而慢
+  ts.scrollTop += sec.getBoundingClientRect().top - ts.getBoundingClientRect().top;
+}
+function syncCatTab(){
+  if (Date.now() < catSpyHold) return;
+  const ts = document.getElementById('tag-sections'); if (!ts || !ts.clientHeight) return;
+  const top = ts.getBoundingClientRect().top;
+  let on = CATS[0];
+  CATS.forEach(cat => { const s = document.getElementById('sec-'+cat); if (s && s.getBoundingClientRect().top - top <= 12) on = cat; });
+  markCatTab(on);
+}
+document.getElementById('tag-sections').addEventListener('scroll', syncCatTab, { passive:true });
+
+// 所有改動選取的路徑（點標籤、全清、複製、復原、換照片、改名、搬移）最後都會呼叫 updatePreview，
+// 包一層就能同步右頁兩條。共用邏輯本體不動，方便和 index.html 對照同步。
+const _updatePreview = updatePreview;
+updatePreview = function(){ _updatePreview(); renderDuoBar(); };
+const _updateUndoButton = updateUndoButton;
+updateUndoButton = function(){ _updateUndoButton(); const b = document.getElementById('btn-undo-duo'); if (b) b.disabled = undoStack.length === 0; };
+
+window.addEventListener('resize', applyDuoLayout);
+Object.values(DUO_Q).forEach(q => matchMedia(q).addEventListener('change', applyDuoLayout));
+applyDuoLayout();
 </script>
 
 <!-- Google Identity Services -->
