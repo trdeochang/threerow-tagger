@@ -235,6 +235,7 @@ body.duo-port #hdivider::after { display: none; }
 <div id="topmenu">
 <button id="btn-undo" onclick="undo()" disabled>⤺ 復原</button>
 <button onclick="exportWP(); closeTopMenu();">產出 WordPress 版</button>
+<button id="btn-layout" onclick="cycleLayout()">▥ 版面：自動</button>
 <div class="mi-progress" id="progress-text-menu"></div>
 </div>
 
@@ -956,26 +957,50 @@ document.addEventListener('click', e => { if(topmenu.classList.contains('open') 
 // iPhone Duo 內螢幕全展開（CSS 見 body.duo-land / body.duo-port）
 // ════════════════════════════════════════════════════════
 // 內螢幕 1878×2670 px @3x = 626×890 pt；外螢幕 466×678 pt 不會命中，維持手機版。
-// 高度留了 Safari 工具列的空間。若瀏覽器支援 Viewport Segments，直接以摺痕判斷。
+// 2026-11-10 改成「看畫面夠不夠寬」而不是卡死內螢幕尺寸：iOS Chrome 的工具列高度、
+// 要求電腦版網站（視窗會變 980 寬）都會讓實際視窗跟規格不同，卡尺寸就切不過去。
+// 若瀏覽器支援 Viewport Segments，直接以摺痕判斷。
 const DUO_Q = {
-  land: '(horizontal-viewport-segments: 2), (pointer: coarse) and (min-width: 820px) and (max-width: 960px) and (min-height: 500px) and (max-height: 700px)',
-  port: '(vertical-viewport-segments: 2), (pointer: coarse) and (min-width: 560px) and (max-width: 700px) and (min-height: 700px) and (max-height: 960px)'
+  land: '(horizontal-viewport-segments: 2), (min-width: 760px) and (min-height: 400px) and (min-aspect-ratio: 23/20)',
+  port: '(vertical-viewport-segments: 2), (min-width: 560px) and (min-height: 700px) and (max-aspect-ratio: 1/1)'
 };
 const DUO_FORCE = new URLSearchParams(location.search).get('duo'); // '1' 強制展開版，'0' 強制手機版
+// ⋯ 選單的「版面」按鈕：自動 → 展開 → 手機，記在這支裝置上
+const LAYOUT_KEY = 'tagger-m-layout';
+const LAYOUT_NAMES = { auto:'自動', duo:'展開', phone:'手機' };
+function layoutPref(){
+  if (DUO_FORCE === '1') return 'duo';
+  if (DUO_FORCE === '0') return 'phone';
+  try { return LAYOUT_NAMES[localStorage.getItem(LAYOUT_KEY)] ? localStorage.getItem(LAYOUT_KEY) : 'auto'; } catch(e){ return 'auto'; }
+}
+function cycleLayout(){
+  const order = ['auto','duo','phone'];
+  const next = order[(order.indexOf(layoutPref()) + 1) % order.length];
+  try { localStorage.setItem(LAYOUT_KEY, next); } catch(e){}
+  applyDuoLayout();
+}
+function updateLayoutBtn(){
+  const btn = document.getElementById('btn-layout'); if (!btn) return;
+  btn.textContent = `▥ 版面：${LAYOUT_NAMES[layoutPref()]}` + (DUO_FORCE ? '（網址指定）' : '');
+}
 function applyDuoLayout(){
+  const pref = layoutPref();
   let mode = '';
-  if (DUO_FORCE === '1') mode = innerWidth >= innerHeight ? 'land' : 'port';
-  else if (DUO_FORCE !== '0') mode = matchMedia(DUO_Q.land).matches ? 'land' : matchMedia(DUO_Q.port).matches ? 'port' : '';
+  if (pref === 'duo') mode = innerWidth >= innerHeight ? 'land' : 'port';
+  else if (pref === 'auto') mode = matchMedia(DUO_Q.land).matches ? 'land' : matchMedia(DUO_Q.port).matches ? 'port' : '';
+  updateLayoutBtn();
   const b = document.body;
-  if ((b.dataset.duo || '') === mode) return;
-  b.dataset.duo = mode;
-  b.classList.toggle('duo', !!mode);
-  b.classList.toggle('duo-land', mode === 'land');
-  b.classList.toggle('duo-port', mode === 'port');
-  if (mode === 'land') closeDrawer(); // 橫拿時縮圖常駐左頁，不需要抽屜
-  renderDuoBar();
-  requestAnimationFrame(syncCatTab);
-  const ae = document.getElementById('li'+filteredPos); if (ae) ae.scrollIntoView({ block:'nearest' });
+  if ((b.dataset.duo || '') !== mode) {
+    b.dataset.duo = mode;
+    b.classList.toggle('duo', !!mode);
+    b.classList.toggle('duo-land', mode === 'land');
+    b.classList.toggle('duo-port', mode === 'port');
+    if (mode === 'land') closeDrawer(); // 橫拿時縮圖常駐左頁，不需要抽屜
+    renderDuoBar();
+    requestAnimationFrame(syncCatTab);
+    const ae = document.getElementById('li'+filteredPos); if (ae) ae.scrollIntoView({ block:'nearest' });
+  }
+  updateDebug();
 }
 
 // 右頁上方兩條：分類跳轉（數字＝這張在該分類貼了幾個）、這張已貼的標籤（點一下移除）
@@ -1041,7 +1066,37 @@ updatePreview = function(){ _updatePreview(); renderDuoBar(); };
 const _updateUndoButton = updateUndoButton;
 updateUndoButton = function(){ _updateUndoButton(); const b = document.getElementById('btn-undo-duo'); if (b) b.disabled = undoStack.length === 0; };
 
+// ?debug=1：左下角顯示這支手機實際的視窗尺寸，拿來對準摺痕、查為什麼沒切版（點一下收合）
+const DUO_DEBUG = new URLSearchParams(location.search).has('debug');
+function updateDebug(){
+  if (!DUO_DEBUG) return;
+  let box = document.getElementById('duo-debug');
+  if (!box) {
+    box = document.createElement('div'); box.id = 'duo-debug';
+    box.style.cssText = 'position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:10000;background:rgba(0,0,0,.8);color:#fff;font:11px/1.5 ui-monospace,Menlo,monospace;padding:8px 10px;border-radius:8px;white-space:pre;max-width:calc(100vw - 16px);overflow:hidden';
+    box.addEventListener('click', () => box.classList.toggle('mini'));
+    const probe = document.createElement('div'); probe.id = 'duo-probe';
+    probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.body.append(box, probe);
+  }
+  const ps = getComputedStyle(document.getElementById('duo-probe'));
+  const vv = window.visualViewport;
+  const ua = navigator.userAgent;
+  const lines = [
+    `視窗 ${innerWidth}×${innerHeight}  可視 ${vv ? Math.round(vv.width)+'×'+Math.round(vv.height) : '-'}`,
+    `螢幕 ${screen.width}×${screen.height} @${devicePixelRatio}x`,
+    `safe 上${parseInt(ps.paddingTop)} 右${parseInt(ps.paddingRight)} 下${parseInt(ps.paddingBottom)} 左${parseInt(ps.paddingLeft)}`,
+    `pointer:coarse ${matchMedia('(pointer: coarse)').matches?'✓':'✗'}  segments ${matchMedia('(horizontal-viewport-segments: 2), (vertical-viewport-segments: 2)').matches?'✓':'✗'}`,
+    `版面 ${document.body.dataset.duo || '手機'}（設定 ${LAYOUT_NAMES[layoutPref()]}）`,
+    `${/CriOS/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':'?'} · ${/Macintosh/.test(ua)?'電腦版網站':/iPhone/.test(ua)?'iPhone':'?'}`
+  ];
+  box.textContent = box.classList.contains('mini') ? lines[0] : lines.join('\n');
+}
+
+// 開合、轉向時重新判斷。不同瀏覽器觸發的事件不一樣，幾個都聽，判斷本身很輕
 window.addEventListener('resize', applyDuoLayout);
+window.addEventListener('orientationchange', () => setTimeout(applyDuoLayout, 250));
+if (window.visualViewport) visualViewport.addEventListener('resize', applyDuoLayout);
 Object.values(DUO_Q).forEach(q => matchMedia(q).addEventListener('change', applyDuoLayout));
 applyDuoLayout();
 </script>
